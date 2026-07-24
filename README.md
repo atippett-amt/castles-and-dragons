@@ -14,6 +14,15 @@ the full design and phase breakdown.
 
 Node 20 (see `.nvmrc`). Node 22 also works.
 
+**Vite is pinned to 7.x at the repo root, deliberately.** Vitest accepts
+`vite@^6 || ^7 || ^8`, and left alone npm hoists Vite 8, which pulls in Rolldown
+and its `@napi-rs/wasm-runtime` package. That package declares `@emnapi/core` and
+`@emnapi/runtime` as *peer* dependencies, and npm installing on Windows never
+writes them to the lockfile — so `npm ci` on Cloudflare's Linux builder fails with
+`EUSAGE ... Missing: @emnapi/core from lock file`. Pinning 7 at the root makes the
+client and Vitest dedupe onto one Rollup-based Vite and removes the whole chain.
+If you bump Vite, run `npm ci` on a clean checkout before pushing.
+
 ## Commands
 
 ```sh
