@@ -82,5 +82,6 @@ Letting the deploy command fetch it via `npx` keeps those binaries out of
 - [x] **Phase 1** — region graph, map loader/validation, seeded RNG, initial state, board rendering
 - [x] **Phase 2** — units, stacks, movement along passable edges, team-sequential turns
 - [x] **Phase 3** — gold income, recruiting, and the three defenses
-- [ ] Phase 4 — siege battle & capture
-- [ ] Phases 5–8 — dragons, AI, victory, setup/save
+- [x] **Phase 4** — siege battle, capture, claim-on-capture, neutral garrisons
+- [ ] Phase 5 — dragons: hatch & growth
+- [ ] Phases 6–8 — AI, victory, setup/save

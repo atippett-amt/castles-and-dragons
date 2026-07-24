@@ -1,24 +1,20 @@
 /**
- * Units, stacks and movement.
+ * Units and stacks: creation, queries and per-turn bookkeeping.
  *
  * Stacks are implicit: every unit standing in a region fights together, so
  * there is no separate "army" entity that could drift out of sync with the
  * units it claims to contain.
  *
- * Movement costs one point per step. A swordsman or archer has one point and so
- * takes one step; a dragon has two and can chain two steps, including across
- * open water. That falls out of the numbers in balance.ts rather than being
- * special-cased per unit type.
+ * Movement orders live in orders.ts and sieges in combat.ts. Keeping those out
+ * of here is what stops combat.ts (which needs unit stats) and movement (which
+ * needs combat) from importing each other in a circle.
  */
 
 import { BALANCE, dragonStat } from './balance';
-import { canTraverse, type Graph } from './graph';
-import { areAllied, isActiveTeamMember } from './players';
-import { getRegion } from './regions';
+import { areAllied } from './players';
 import {
-  NEUTRAL,
   type GameState,
-  type PlayerId,
+  type Owner,
   type RegionId,
   type TeamId,
   type Unit,
@@ -70,7 +66,7 @@ export function unitsIn(state: GameState, regionId: RegionId): readonly Unit[] {
   return allUnits(state).filter((unit) => unit.regionId === regionId);
 }
 
-export function unitsOf(state: GameState, owner: PlayerId): readonly Unit[] {
+export function unitsOf(state: GameState, owner: Owner): readonly Unit[] {
   return allUnits(state).filter((unit) => unit.owner === owner);
 }
 
@@ -85,7 +81,7 @@ export function unitsOfTeam(state: GameState, teamId: TeamId): readonly Unit[] {
 export function defendersAgainst(
   state: GameState,
   regionId: RegionId,
-  owner: PlayerId,
+  owner: Owner,
 ): readonly Unit[] {
   return unitsIn(state, regionId).filter((unit) => !areAllied(state, unit.owner, owner));
 }
@@ -97,7 +93,7 @@ export function defendersAgainst(
 export function spawnUnit(
   state: GameState,
   type: UnitType,
-  owner: PlayerId,
+  owner: Owner,
   regionId: RegionId,
 ): Unit {
   const profile = unitProfile(type, state.turn);
@@ -125,142 +121,4 @@ export function refreshMovement(state: GameState, teamId: TeamId): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Movement
-// ---------------------------------------------------------------------------
 
-export type MoveOutcome =
-  /** Moved into a hold the movers already hold or are allied with. */
-  | 'reinforced'
-  /** Moved into an undefended neutral or enemy hold, taking it. */
-  | 'captured'
-  /** Defenders present — a siege is required. Stubbed until Phase 4. */
-  | 'battle';
-
-export interface MoveResult {
-  readonly outcome: MoveOutcome;
-  readonly movedUnitIds: readonly UnitId[];
-  readonly from: RegionId;
-  readonly to: RegionId;
-  /** Set when outcome is 'captured'. */
-  readonly capturedFrom?: string;
-}
-
-export class IllegalMoveError extends Error {
-  constructor(reason: string) {
-    super(reason);
-    this.name = 'IllegalMoveError';
-  }
-}
-
-/** Why `unit` may not step to `to`, or null when the step is legal. */
-export function moveBlockedReason(
-  state: GameState,
-  graph: Graph,
-  unit: Unit,
-  to: RegionId,
-): string | null {
-  if (unit.movesLeft < 1) return `${unit.type} has no movement left`;
-  if (unit.regionId === to) return 'already there';
-  if (!canTraverse(graph, unit.regionId, to, unit.type)) {
-    // The interesting case: a land unit staring across open water.
-    return `a ${unit.type} cannot cross that border`;
-  }
-  return null;
-}
-
-/**
- * Every hold the given stack could step to together.
- *
- * Intersecting across the selection matters: a mixed stack of swordsmen and a
- * dragon can only move as one to holds the swordsmen can also reach, so the
- * water crossings drop out of the list.
- */
-export function legalDestinations(
-  state: GameState,
-  graph: Graph,
-  unitIds: readonly UnitId[],
-): readonly RegionId[] {
-  if (unitIds.length === 0) return [];
-  const units = unitIds.map((id) => getUnit(state, id));
-  const first = units[0];
-  if (!first) return [];
-
-  const candidates = graph.adjacency.get(first.regionId) ?? [];
-  return candidates
-    .map((adjacent) => adjacent.to)
-    .filter((to) => units.every((unit) => moveBlockedReason(state, graph, unit, to) === null));
-}
-
-/**
- * Moves a stack one step, on behalf of `actingPlayer`.
- *
- * Orders are scoped to a single player, not to their whole team. Allies share
- * a turn but not a purse or a chain of command: one player may never move
- * another's units, even a teammate's. In Stage B the Durable Object knows who
- * sent an order and passes them here, so the same check guards the network.
- *
- * Ownership only changes when the destination has no defenders. If defenders
- * are present this reports 'battle' and changes nothing — Phase 4 replaces that
- * branch with a real siege, and the surrounding rules stay as they are.
- */
-export function moveUnits(
-  state: GameState,
-  graph: Graph,
-  unitIds: readonly UnitId[],
-  to: RegionId,
-  actingPlayer: PlayerId,
-): MoveResult {
-  if (unitIds.length === 0) throw new IllegalMoveError('no units selected');
-
-  if (!isActiveTeamMember(state, actingPlayer)) {
-    throw new IllegalMoveError('it is not your team’s turn');
-  }
-
-  const units = unitIds.map((id) => getUnit(state, id));
-  const first = units[0];
-  if (!first) throw new IllegalMoveError('no units selected');
-
-  const from = first.regionId;
-  if (units.some((unit) => unit.regionId !== from)) {
-    throw new IllegalMoveError('all units in a move must start in the same hold');
-  }
-
-  if (units.some((unit) => unit.owner !== actingPlayer)) {
-    throw new IllegalMoveError('you can only order your own units');
-  }
-
-  const mover = actingPlayer;
-
-  for (const unit of units) {
-    const reason = moveBlockedReason(state, graph, unit, to);
-    if (reason) throw new IllegalMoveError(reason);
-  }
-
-  const defenders = defendersAgainst(state, to, mover);
-  if (defenders.length > 0) {
-    return { outcome: 'battle', movedUnitIds: [], from, to };
-  }
-
-  for (const unit of units) {
-    unit.regionId = to;
-    unit.movesLeft -= 1;
-  }
-
-  const destination = getRegion(state, to);
-  // areAllied already reports false for NEUTRAL, so this covers both "my hold"
-  // and "an ally's hold" without a separate neutral check.
-  if (areAllied(state, destination.owner, mover)) {
-    return { outcome: 'reinforced', movedUnitIds: unitIds, from, to };
-  }
-
-  const previousOwner = destination.owner;
-  destination.owner = mover;
-  return {
-    outcome: 'captured',
-    movedUnitIds: unitIds,
-    from,
-    to,
-    capturedFrom: previousOwner,
-  };
-}

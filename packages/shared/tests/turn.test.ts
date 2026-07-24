@@ -16,6 +16,7 @@ import {
   type TeamSetup,
 } from '@shared/index';
 import rawHolds from '../data/maps/holds.json';
+import { clearNeutralGarrisons } from './helpers';
 
 const map: MapData = loadMap(rawHolds);
 const graph: Graph = buildGraph(map);
@@ -81,6 +82,11 @@ describe('endTurn', () => {
 });
 
 describe('movement refresh', () => {
+  // Movement, not sieges: strip the neutral garrisons out of the way.
+  beforeEach(() => {
+    clearNeutralGarrisons(state);
+  });
+
   it('restores movement to the team whose turn is starting', () => {
     const unit = unitsIn(state, 'florence')[0]!;
     moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');

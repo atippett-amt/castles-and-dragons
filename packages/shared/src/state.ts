@@ -207,6 +207,18 @@ export function createInitialState(options: CreateStateOptions): GameState {
     for (let i = 0; i < BALANCE.start.archers; i++) spawnUnit(state, 'archer', player.id, home);
   }
 
+  // Neutral holds are guarded. Walking into one should cost something, or the
+  // early game is a land grab decided by who clicks fastest.
+  for (const region of map.regions) {
+    if (regions[region.id]?.owner !== NEUTRAL) continue;
+    for (let i = 0; i < BALANCE.neutral.swordsmen; i++) {
+      spawnUnit(state, 'swordsman', NEUTRAL, region.id);
+    }
+    for (let i = 0; i < BALANCE.neutral.archers; i++) {
+      spawnUnit(state, 'archer', NEUTRAL, region.id);
+    }
+  }
+
   // Open the first team's turn properly rather than treating turn 1 as a
   // special case: they collect income and start with a full build allowance,
   // exactly as every later turn does.

@@ -106,7 +106,11 @@ export interface RegionState {
 export interface Unit {
   readonly id: UnitId;
   readonly type: UnitType;
-  owner: PlayerId;
+  /**
+   * A player, or NEUTRAL for the garrisons guarding unclaimed holds. Neutral
+   * units defend in place and can never be ordered — nobody owns them.
+   */
+  owner: Owner;
   regionId: RegionId;
   hp: number;
   /** Steps remaining this turn. Refreshed at the owning team's turn start. */

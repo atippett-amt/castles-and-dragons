@@ -15,6 +15,7 @@ import {
 } from '@shared/index';
 import { createBoard } from './render/board';
 import { createDefaultGame } from './setup/defaultGame';
+import { createBattleLog } from './ui/battleLog';
 import { createHoldPanel } from './ui/holdPanel';
 import { createHud } from './ui/hud';
 
@@ -66,6 +67,7 @@ export function createApp(root: HTMLElement): void {
     onFortify,
   });
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
+  const battleLog = createBattleLog(graph);
 
   /** Holds the current selection could march into this turn. */
   function targets(): ReadonlySet<RegionId> {
@@ -103,21 +105,27 @@ export function createApp(root: HTMLElement): void {
     const ids = [...selectedUnits];
     try {
       const result = moveUnits(state, graph, ids, to, humanPlayerId);
+      if (result.battle) battleLog.show(result.battle);
 
       switch (result.outcome) {
         case 'captured':
-          hud.say(`Took ${holdName(to)}.`);
-          break;
+          hud.say(
+            result.battle
+              ? `${holdName(to)} stormed and taken.`
+              : `Took ${holdName(to)}.`,
+          );
+          selectRegion(to);
+          return;
         case 'reinforced':
           hud.say(`Reinforced ${holdName(to)}.`);
-          break;
-        case 'battle':
-          hud.say(`${holdName(to)} is defended — sieges arrive in Phase 4.`, 'warn');
-          render();
+          selectRegion(to);
+          return;
+        case 'repelled':
+          // The survivors, if any, are still standing where they started.
+          hud.say(`The assault on ${holdName(to)} was thrown back.`, 'warn');
+          selectRegion(selectedRegion);
           return;
       }
-
-      selectRegion(to);
     } catch (error) {
       hud.say(error instanceof Error ? error.message : 'Illegal move', 'warn');
       render();
@@ -181,7 +189,7 @@ export function createApp(root: HTMLElement): void {
 
   const stage = document.createElement('main');
   stage.className = 'stage';
-  stage.append(board.element, panel.element);
+  stage.append(board.element, panel.element, battleLog.element);
 
   // Clicking bare map, outside any banner, clears the selection.
   stage.addEventListener('click', (event) => {

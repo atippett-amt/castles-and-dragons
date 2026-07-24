@@ -16,6 +16,8 @@ export * from './players';
 export * from './regions';
 export * from './defense';
 export * from './units';
+export * from './combat';
+export * from './orders';
 export * from './holds';
 export * from './turn';
 export * from './state';

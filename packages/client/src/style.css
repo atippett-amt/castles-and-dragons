@@ -435,6 +435,57 @@ body {
   border-left-color: rgb(120 196 232 / 90%);
 }
 
+/* --------------------------------------------------------------------------
+   Battle log
+   -------------------------------------------------------------------------- */
+
+.battlelog {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  width: min(22rem, calc(100% - 2rem));
+  max-height: 60%;
+  overflow-y: auto;
+  padding: 0.9rem 1rem 1rem;
+  background: rgb(23 18 12 / 97%);
+  border: 1px solid #3d3222;
+  border-top: 4px solid #8a3a2f;
+  border-radius: 3px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 70%);
+}
+
+.battlelog--won {
+  border-top-color: var(--gold);
+}
+
+.battlelog[hidden] {
+  display: none;
+}
+
+.battlelog__title {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+}
+
+.battlelog__summary {
+  margin: 0.15rem 0 0.7rem;
+  font-size: 0.74rem;
+  color: var(--parchment-dim);
+}
+
+.battlelog__events {
+  margin: 0 0 0.8rem;
+  padding-left: 1.1rem;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.battlelog__events li {
+  margin-bottom: 0.15rem;
+}
+
 @media (max-width: 720px) {
   .legend {
     display: none;
