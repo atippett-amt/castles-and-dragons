@@ -1,0 +1,51 @@
+{
+  "name": "Wilson Lake Realms",
+  "image": "assets/map.png",
+  "lake": "Wilson Lake",
+  "turnLimit": 100,
+  "notes": "Adjacency verified against the map art (see docs/map-verification.md). THREE bridges cross Wilson Lake: Florence-Sheffield, Florence-Muscle Shoals, and Killen-Ford City. Land units cross land + bridge edges only. DRAGONS cross land, bridge, AND water (they ignore the lake entirely). Every region starts with one dragon egg (dragonEgg:true) that hatches on turn 5 for whoever holds the region.",
+  "edgeTypes": {
+    "land": "normal border; passable by Swordsman, Archer, Dragon",
+    "bridge": "a lake crossing over a bridge; passable by all units; strategic chokepoint",
+    "water": "open-water lake crossing; passable by Dragons only"
+  },
+  "dragonRules": {
+    "eggPerRegion": true,
+    "hatchTurn": 5,
+    "growth": "linear from hatch (turn 5, weakest) to turn 100 (strongest); strength is a function of current turn",
+    "movement": "crosses land, bridge, and water edges; up to 2 regions per turn"
+  },
+  "regions": [
+    { "id": "underwood_petersville", "name": "Underwood-Petersville", "sigil": "direwolf",     "terrain": "mountains", "defenseBonus": 3, "goldPerTurn": 2, "side": "north", "labelPos": { "x": 0.20, "y": 0.22 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "bailey_springs",        "name": "Bailey Springs",        "sigil": "stag",          "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 2, "side": "north", "labelPos": { "x": 0.52, "y": 0.16 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "killen",                "name": "Killen",                "sigil": "sword",         "terrain": "forest",    "defenseBonus": 2, "goldPerTurn": 2, "side": "north", "labelPos": { "x": 0.75, "y": 0.27 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "florence",              "name": "Florence",              "sigil": "rose",          "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 3, "side": "north", "labelPos": { "x": 0.27, "y": 0.44 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "sheffield",             "name": "Sheffield",             "sigil": "fish",          "terrain": "lakeshore", "defenseBonus": 1, "goldPerTurn": 2, "side": "south", "labelPos": { "x": 0.20, "y": 0.64 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "muscle_shoals",         "name": "Muscle Shoals",         "sigil": "trident",       "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 3, "side": "south", "labelPos": { "x": 0.44, "y": 0.68 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "ford_city",             "name": "Ford City",             "sigil": "bull",          "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 2, "side": "south", "labelPos": { "x": 0.74, "y": 0.60 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "white_house_springs",   "name": "White House Springs",   "sigil": "castle",        "terrain": "forest",    "defenseBonus": 2, "goldPerTurn": 2, "side": "south", "labelPos": { "x": 0.22, "y": 0.86 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "littleville",           "name": "Littleville",           "sigil": "weirwood_tree", "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 2, "side": "south", "labelPos": { "x": 0.48, "y": 0.92 }, "owner": "neutral", "dragonEgg": true },
+    { "id": "whiteoak",              "name": "Whiteoak",              "sigil": "oak_tree",      "terrain": "forest",    "defenseBonus": 1, "goldPerTurn": 2, "side": "south", "labelPos": { "x": 0.78, "y": 0.82 }, "owner": "neutral", "dragonEgg": true }
+  ],
+  "edges": [
+    { "a": "underwood_petersville", "b": "bailey_springs",       "type": "land" },
+    { "a": "underwood_petersville", "b": "florence",             "type": "land" },
+    { "a": "bailey_springs",        "b": "killen",               "type": "land" },
+    { "a": "bailey_springs",        "b": "florence",             "type": "land" },
+
+    { "a": "florence",              "b": "sheffield",            "type": "bridge" },
+    { "a": "florence",              "b": "muscle_shoals",        "type": "bridge" },
+    { "a": "killen",                "b": "ford_city",            "type": "bridge" },
+    { "a": "killen",                "b": "muscle_shoals",        "type": "water" },
+
+    { "a": "sheffield",             "b": "muscle_shoals",        "type": "land" },
+    { "a": "sheffield",             "b": "white_house_springs",  "type": "land" },
+    { "a": "muscle_shoals",         "b": "white_house_springs",  "type": "land" },
+    { "a": "muscle_shoals",         "b": "littleville",          "type": "land" },
+    { "a": "muscle_shoals",         "b": "ford_city",            "type": "land" },
+    { "a": "muscle_shoals",         "b": "whiteoak",             "type": "land" },
+    { "a": "ford_city",             "b": "whiteoak",             "type": "land" },
+    { "a": "white_house_springs",   "b": "littleville",          "type": "land" },
+    { "a": "littleville",           "b": "whiteoak",             "type": "land" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker + Durable Objects. Empty until Stage B (Phase 9).",
+  "scripts": {
+    "typecheck": "echo \"server: nothing to typecheck until Stage B\""
+  }
+}

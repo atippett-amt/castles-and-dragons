@@ -1,0 +1,77 @@
+:root {
+  --parchment: #d9c9a3;
+  --ink: #241a10;
+  --void: #14100b;
+  --gold: #c9a227;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--void);
+  color: var(--parchment);
+  font-family: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+
+/* The board shrink-wraps the map image, which is itself letterboxed by
+   max-width/max-height. Phase 1 positions hold banners against this element
+   using normalized labelPos coordinates, so .board must match the *rendered*
+   image bounds exactly — no padding, no leftover object-fit gutter.
+   min-width/min-height 0 is required: as a grid item, .board would otherwise
+   refuse to shrink below the image's intrinsic 1023px width. */
+.board {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  line-height: 0;
+  box-shadow: 0 0 60px rgb(0 0 0 / 80%);
+}
+
+/* The clamp is in viewport units, not percentages: .board has an auto height,
+   so a percentage max-height on the image would resolve against an indefinite
+   containing block and be dropped entirely. The board is meant to fill the
+   viewport, and everything layered on it (banners, HUD) is absolutely
+   positioned over the map rather than sharing document flow with it. */
+.board__map {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100vw;
+  max-height: 100dvh;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 1rem;
+  padding: 0.4rem 0.8rem;
+  background: rgb(20 16 11 / 78%);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--parchment);
+  pointer-events: none;
+}

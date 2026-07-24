@@ -1,0 +1,28 @@
+{
+  "name": "castles-and-dragons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Castles & Dragons — a turn-based domination strategy game on the Wilson Lake Realms.",
+  "workspaces": [
+    "packages/shared",
+    "packages/client",
+    "packages/server"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "preview": "npm run preview -w client",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w client"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.10"
+  }
+}
