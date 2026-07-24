@@ -12,4 +12,8 @@ export type { Balance } from './balance';
 export * from './types';
 export * from './rng';
 export * from './graph';
+export * from './players';
+export * from './regions';
+export * from './units';
+export * from './turn';
 export * from './state';

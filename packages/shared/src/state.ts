@@ -8,6 +8,7 @@
 
 import { BALANCE } from './balance';
 import { createRng } from './rng';
+import { spawnUnit } from './units';
 import {
   NEUTRAL,
   type GameState,
@@ -18,6 +19,8 @@ import {
   type RegionState,
   type Team,
   type TeamId,
+  type Unit,
+  type UnitId,
 } from './types';
 
 export const MIN_PLAYERS = 2;
@@ -45,34 +48,6 @@ export interface CreateStateOptions {
   readonly players: readonly PlayerSetup[];
   readonly teams: readonly TeamSetup[];
   readonly seed?: number;
-}
-
-/**
- * Reads a region out of state, failing loudly on a bad id.
- *
- * Worth having because `noUncheckedIndexedAccess` makes every lookup return
- * `RegionState | undefined`, and silently propagating an undefined here would
- * surface much later as a confusing render or combat bug.
- */
-export function getRegion(state: GameState, id: RegionId): RegionState {
-  const region = state.regions[id];
-  if (!region) throw new Error(`Unknown region: ${id}`);
-  return region;
-}
-
-export function regionsOwnedBy(state: GameState, owner: string): readonly RegionState[] {
-  return Object.values(state.regions).filter((region) => region.owner === owner);
-}
-
-export function playersOfTeam(state: GameState, teamId: TeamId): readonly Player[] {
-  return state.players.filter((player) => player.teamId === teamId);
-}
-
-/** The team whose turn it is. */
-export function activeTeam(state: GameState): Team {
-  const team = state.teams[state.activeTeamIndex];
-  if (!team) throw new Error(`No team at index ${state.activeTeamIndex}`);
-  return team;
 }
 
 /**
@@ -197,11 +172,13 @@ export function createInitialState(options: CreateStateOptions): GameState {
     };
   }
 
-  return {
+  const state: GameState = {
     turn: 1,
     turnLimit: BALANCE.game.turnLimit,
     mapName: map.name,
     regions,
+    units: {} as Record<UnitId, Unit>,
+    nextUnitId: 1,
     players: players.map(
       (player): Player => ({
         id: player.id,
@@ -215,4 +192,15 @@ export function createInitialState(options: CreateStateOptions): GameState {
     activeTeamIndex: 0,
     rng: createRng(seed),
   };
+
+  // Starting garrisons. Spawned in player order so unit ids stay deterministic,
+  // which keeps saves and Stage B snapshots comparable.
+  for (const player of players) {
+    const home = starts.get(player.id);
+    if (home === undefined) continue;
+    for (let i = 0; i < BALANCE.start.swordsmen; i++) spawnUnit(state, 'swordsman', player.id, home);
+    for (let i = 0; i < BALANCE.start.archers; i++) spawnUnit(state, 'archer', player.id, home);
+  }
+
+  return state;
 }

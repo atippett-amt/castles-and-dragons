@@ -12,6 +12,7 @@
 export type RegionId = string;
 export type PlayerId = string;
 export type TeamId = string;
+export type UnitId = string;
 
 /** Sentinel owner for a hold nobody controls. */
 export const NEUTRAL = 'neutral';
@@ -82,6 +83,20 @@ export interface RegionState {
   hasEgg: boolean;
 }
 
+/**
+ * A single fighting unit. Stacks are implicit: every unit standing in the same
+ * region fights together, so there is no separate "army" entity to keep in sync.
+ */
+export interface Unit {
+  readonly id: UnitId;
+  readonly type: UnitType;
+  owner: PlayerId;
+  regionId: RegionId;
+  hp: number;
+  /** Steps remaining this turn. Refreshed at the owning team's turn start. */
+  movesLeft: number;
+}
+
 export interface Player {
   readonly id: PlayerId;
   readonly name: string;
@@ -106,6 +121,9 @@ export interface GameState {
   readonly turnLimit: number;
   readonly mapName: string;
   readonly regions: Record<RegionId, RegionState>;
+  readonly units: Record<UnitId, Unit>;
+  /** Monotonic counter so unit ids are deterministic and replay-stable. */
+  nextUnitId: number;
   readonly players: readonly Player[];
   readonly teams: readonly Team[];
   /** Index into `teams` — whose turn it is. Team-sequential play. */

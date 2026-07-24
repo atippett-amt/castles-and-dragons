@@ -36,6 +36,16 @@ export const BALANCE = {
     startingGold: 5,           // each player's treasury at game start
   },
 
+  // ---------------------------------------------------------------------------
+  // STARTING FORCES — the garrison a player begins with in their home hold.
+  // Deliberately mirrors `neutral` below, so an early grab at a neutral hold is
+  // a real fight rather than a free gift.
+  // ---------------------------------------------------------------------------
+  start: {
+    swordsmen: 2,
+    archers: 1,
+  },
+
   // Costs in Gold. With holds yielding 2–3/turn, a unit is ~1 turn's income,
   // a defense ~2 turns — so fortifying is a real tempo cost.
   cost: {

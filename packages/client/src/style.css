@@ -71,6 +71,45 @@ body {
   border-left: 4px solid var(--owner, transparent);
 }
 
+.hud__message {
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud__message--warn {
+  color: #e0a63c;
+}
+
+.button {
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--parchment);
+  background: #2a2117;
+  border: 1px solid #4a3c28;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #3a2e20;
+}
+
+.button--primary {
+  flex: none;
+  color: var(--ink);
+  background: var(--gold);
+  border-color: var(--gold);
+  font-weight: 700;
+}
+
+.button--primary:hover {
+  background: #ddb63a;
+}
+
 .legend {
   margin-left: auto;
   display: flex;
@@ -181,6 +220,38 @@ body {
   display: none;
 }
 
+/* Garrison size. Hidden at zero rather than showing a bare "0". */
+.banner__count {
+  padding: 0 0.25rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--parchment);
+  border-radius: 2px;
+}
+
+.banner__count[hidden] {
+  display: none;
+}
+
+/* A hold the current selection could march into. */
+.banner--target {
+  box-shadow: 0 0 0 2px rgb(226 176 63 / 85%), 0 0 14px rgb(226 176 63 / 45%);
+  animation: target-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes target-pulse {
+  50% {
+    box-shadow: 0 0 0 2px rgb(226 176 63 / 100%), 0 0 20px rgb(226 176 63 / 75%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner--target {
+    animation: none;
+  }
+}
+
 /* --------------------------------------------------------------------------
    Hold detail panel
    -------------------------------------------------------------------------- */
@@ -249,6 +320,64 @@ body {
   padding: 0;
   list-style: none;
   font-size: 0.76rem;
+}
+
+.panel__empty {
+  margin: 0 0 0.9rem;
+  font-size: 0.76rem;
+  color: var(--parchment-dim);
+}
+
+.panel__units {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.76rem;
+}
+
+.unit {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.unit--disabled {
+  opacity: 0.45;
+}
+
+.unit__check {
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.unit__name {
+  text-transform: capitalize;
+}
+
+.unit__hp,
+.unit__moves {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  color: var(--parchment-dim);
+}
+
+.unit__moves--spent {
+  font-style: italic;
+}
+
+.panel__actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel__hint {
+  margin: 0 0 0.9rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--parchment-dim);
 }
 
 .border {

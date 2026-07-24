@@ -1,19 +1,15 @@
-import {
-  type GameState,
-  type Graph,
-  type MapData,
-  type RegionDef,
-  type RegionId,
-} from '@shared/index';
+import { unitsIn, type GameState, type Graph, type MapData, type RegionDef, type RegionId } from '@shared/index';
 import { EDGE_STYLE, colorForOwner } from './colors';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export interface Board {
   readonly element: HTMLElement;
-  /** Repaints owner colours, eggs and selection from current state. */
+  /** Repaints owner colours, garrison counts, eggs and selection from state. */
   refresh(): void;
   select(id: RegionId | null): void;
+  /** Marks holds the current selection could move into. */
+  highlight(ids: ReadonlySet<RegionId>): void;
   readonly selected: RegionId | null;
 }
 
@@ -21,7 +17,7 @@ export interface BoardOptions {
   readonly map: MapData;
   readonly graph: Graph;
   readonly state: GameState;
-  readonly onSelect: (id: RegionId | null) => void;
+  readonly onSelect: (id: RegionId) => void;
 }
 
 /**
@@ -55,9 +51,9 @@ export function createBoard(options: BoardOptions): Board {
 
   for (const region of map.regions) {
     const banner = createBanner(region);
-    banner.addEventListener('click', () => {
-      board.select(selected === region.id ? null : region.id);
-      onSelect(board.selected);
+    banner.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onSelect(region.id);
     });
     banners.set(region.id, banner);
     element.append(banner);
@@ -74,18 +70,29 @@ export function createBoard(options: BoardOptions): Board {
         banner.classList.toggle('banner--selected', regionId === id);
       }
     },
+    highlight(ids) {
+      for (const [regionId, banner] of banners) {
+        banner.classList.toggle('banner--target', ids.has(regionId));
+      }
+    },
     refresh() {
       for (const region of map.regions) {
         const banner = banners.get(region.id);
         const regionState = state.regions[region.id];
         if (!banner || !regionState) continue;
 
-        const color = colorForOwner(state, regionState.owner);
-        banner.style.setProperty('--owner', color);
+        banner.style.setProperty('--owner', colorForOwner(state, regionState.owner));
         banner.classList.toggle('banner--owned', regionState.owner !== 'neutral');
 
         const egg = banner.querySelector<HTMLElement>('.banner__egg');
         if (egg) egg.hidden = !regionState.hasEgg;
+
+        const garrison = unitsIn(state, region.id).length;
+        const count = banner.querySelector<HTMLElement>('.banner__count');
+        if (count) {
+          count.textContent = String(garrison);
+          count.hidden = garrison === 0;
+        }
       }
     },
   };
@@ -107,13 +114,18 @@ function createBanner(region: RegionDef): HTMLButtonElement {
   name.className = 'banner__name';
   name.textContent = region.name;
 
+  // Garrison size. Hidden entirely at zero rather than showing a bare "0".
+  const count = document.createElement('span');
+  count.className = 'banner__count';
+  count.hidden = true;
+
   // An unhatched dragon egg. Every hold starts with one; they hatch on turn 5.
   const egg = document.createElement('span');
   egg.className = 'banner__egg';
   egg.textContent = '●';
   egg.setAttribute('aria-label', 'dragon egg');
 
-  banner.append(name, egg);
+  banner.append(name, count, egg);
   return banner;
 }
 
