@@ -82,15 +82,31 @@ describe('Wilson Lake Realms map', () => {
     expect(map.regions).toHaveLength(10);
   });
 
-  it('has exactly three bridges and one open-water crossing', () => {
+  it('has exactly three bridges and two open-water crossings', () => {
     const byType = (type: string) => map.edges.filter((edge) => edge.type === type);
     expect(byType('bridge').map((e) => [e.a, e.b])).toEqual([
       ['florence', 'sheffield'],
       ['florence', 'muscle_shoals'],
       ['killen', 'ford_city'],
     ]);
-    expect(byType('water')).toHaveLength(1);
-    expect(map.edges).toHaveLength(17);
+    expect(byType('water').map((e) => [e.a, e.b])).toEqual([
+      ['killen', 'muscle_shoals'],
+      ['florence', 'ford_city'],
+    ]);
+    expect(map.edges).toHaveLength(18);
+  });
+
+  it('puts an open-water crossing on both the eastern and central lake', () => {
+    // Dragons are the only force that can flank across the lake, so a single
+    // crossing would leave the ability nearly inert. Both routes are dragon-only.
+    for (const [from, to] of [
+      ['killen', 'muscle_shoals'],
+      ['florence', 'ford_city'],
+    ] as const) {
+      expect(canTraverse(graph, from, to, 'dragon')).toBe(true);
+      expect(canTraverse(graph, from, to, 'swordsman')).toBe(false);
+      expect(canTraverse(graph, from, to, 'archer')).toBe(false);
+    }
   });
 
   it('gives every hold a dragon egg — exactly ten exist', () => {
