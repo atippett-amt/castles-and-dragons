@@ -1,10 +1,14 @@
 import {
   activeTeam,
   endTurn,
+  fortify,
   isActiveTeamMember,
   legalDestinations,
   moveUnits,
+  recruit,
   unitsIn,
+  type DefenseType,
+  type RecruitableType,
   type RegionId,
   type Unit,
   type UnitId,
@@ -27,18 +31,40 @@ import { createHud } from './ui/hud';
  * so one player drives every side.
  */
 export function createApp(root: HTMLElement): void {
-  const { map, graph, state } = createDefaultGame();
+  const { map, graph, state, humanPlayerId } = createDefaultGame();
 
   let selectedRegion: RegionId | null = null;
   let selectedUnits = new Set<UnitId>();
 
+  /**
+   * Only your own units, and only on your own turn.
+   *
+   * Scoped to the player rather than the team on purpose: an ally shares your
+   * turn but not your chain of command, so you never end up steering someone
+   * else's holds. Until Phase 6 lands, the AI players simply do nothing on
+   * their turns.
+   */
   const canOrder = (unit: Unit): boolean =>
-    isActiveTeamMember(state, unit.owner) && unit.movesLeft > 0;
+    unit.owner === humanPlayerId &&
+    isActiveTeamMember(state, humanPlayerId) &&
+    unit.movesLeft > 0;
+
+  /** True when nobody on the active team is human — an AI's turn to act. */
+  const isAiTurn = (): boolean => !isActiveTeamMember(state, humanPlayerId);
 
   const holdName = (id: RegionId): string => graph.regions.get(id)?.name ?? id;
 
   const hud = createHud({ state, onEndTurn });
-  const panel = createHoldPanel({ graph, state, canOrder, onToggleUnit, onSelectAll });
+  const panel = createHoldPanel({
+    graph,
+    state,
+    actingPlayer: humanPlayerId,
+    canOrder,
+    onToggleUnit,
+    onSelectAll,
+    onRecruit,
+    onFortify,
+  });
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
 
   /** Holds the current selection could march into this turn. */
@@ -76,7 +102,7 @@ export function createApp(root: HTMLElement): void {
   function march(to: RegionId): void {
     const ids = [...selectedUnits];
     try {
-      const result = moveUnits(state, graph, ids, to);
+      const result = moveUnits(state, graph, ids, to, humanPlayerId);
 
       switch (result.outcome) {
         case 'captured':
@@ -111,12 +137,46 @@ export function createApp(root: HTMLElement): void {
     render();
   }
 
+  function onRecruit(regionId: RegionId, type: RecruitableType): void {
+    try {
+      recruit(state, regionId, type, humanPlayerId);
+      hud.say(`Raised a ${type} at ${holdName(regionId)}.`);
+      // Re-open the hold so the new unit appears and is picked up for orders.
+      selectRegion(regionId);
+    } catch (error) {
+      hud.say(error instanceof Error ? error.message : 'Cannot recruit', 'warn');
+      render();
+    }
+  }
+
+  function onFortify(regionId: RegionId, type: DefenseType): void {
+    try {
+      fortify(state, regionId, type, humanPlayerId);
+      hud.say(`Built ${type} at ${holdName(regionId)}.`);
+      render();
+    } catch (error) {
+      hud.say(error instanceof Error ? error.message : 'Cannot build', 'warn');
+      render();
+    }
+  }
+
   function onEndTurn(): void {
-    const change = endTurn(state);
+    const change = endTurn(state, graph);
     selectedRegion = null;
     selectedUnits = new Set();
-    hud.say(`${activeTeam(state).name} to move — turn ${change.turn}.`);
+    announceTurn(change.turn, change.incomeCollected);
     render();
+  }
+
+  function announceTurn(turn: number, income: number): void {
+    const name = activeTeam(state).name;
+    if (isAiTurn()) {
+      // Phase 6 makes this turn play itself. Saying so beats leaving a player
+      // clicking at a board that will not respond.
+      hud.say(`${name} (AI) — no AI yet, End Turn to continue. Turn ${turn}.`, 'warn');
+    } else {
+      hud.say(`Your move — turn ${turn}. Collected ${income} gold.`);
+    }
   }
 
   const stage = document.createElement('main');
@@ -129,6 +189,6 @@ export function createApp(root: HTMLElement): void {
   });
 
   root.append(hud.element, stage);
-  hud.say(`${activeTeam(state).name} to move — turn ${state.turn}.`);
+  announceTurn(state.turn, 0);
   render();
 }

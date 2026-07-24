@@ -1,11 +1,24 @@
 import {
+  DEFENSE_TYPES,
   NEUTRAL,
+  RECRUITABLE_TYPES,
+  buildsRemaining,
+  defenseCap,
+  defenseCost,
+  fortifyBlockedReason,
+  isActiveTeamMember,
   neighbors,
   passableBy,
+  playerById,
+  recruitBlockedReason,
+  recruitCost,
   unitProfile,
   unitsIn,
+  type DefenseType,
   type GameState,
   type Graph,
+  type PlayerId,
+  type RecruitableType,
   type RegionId,
   type Unit,
   type UnitId,
@@ -20,15 +33,20 @@ export interface HoldPanel {
 export interface HoldPanelOptions {
   readonly graph: Graph;
   readonly state: GameState;
+  /** The player this browser controls; build orders are issued as them. */
+  readonly actingPlayer: PlayerId;
   /** True when the unit belongs to the active team and can still move. */
   readonly canOrder: (unit: Unit) => boolean;
   readonly onToggleUnit: (unitId: UnitId) => void;
   readonly onSelectAll: (regionId: RegionId, select: boolean) => void;
+  readonly onRecruit: (regionId: RegionId, type: RecruitableType) => void;
+  readonly onFortify: (regionId: RegionId, type: DefenseType) => void;
 }
 
 /** Detail card for the selected hold, including its garrison. */
 export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
-  const { graph, state, canOrder, onToggleUnit, onSelectAll } = options;
+  const { graph, state, actingPlayer, canOrder, onToggleUnit, onSelectAll, onRecruit, onFortify } =
+    options;
 
   const element = document.createElement('aside');
   element.className = 'panel';
@@ -66,12 +84,17 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
 
     const stats = document.createElement('dl');
     stats.className = 'panel__stats';
+    const built = DEFENSE_TYPES.filter((type) => regionState.defenses[type] > 0)
+      .map((type) => `${type} ${regionState.defenses[type]}`)
+      .join(', ');
+
     const rows: readonly (readonly [string, string])[] = [
       ['Side', region.side === 'north' ? 'North' : 'South'],
       ['Terrain', region.terrain],
       ['Defense', `+${region.defenseBonus}`],
       ['Gold / turn', String(region.goldPerTurn)],
       ['Dragon egg', regionState.hasEgg ? 'Unhatched' : 'None'],
+      ['Works', built === '' ? 'None' : built],
     ];
     for (const [label, value] of rows) {
       const dt = document.createElement('dt');
@@ -85,9 +108,73 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       title,
       owner,
       stats,
+      ...buildSection(id),
       ...garrisonSection(id, selectedUnitIds),
       ...bordersSection(id),
     );
+  }
+
+  /**
+   * Recruit-or-fortify controls, shown only for a hold the acting team owns.
+   *
+   * Every button stays visible even when unavailable, with the engine's own
+   * reason as its tooltip — hiding them would leave a player guessing why a
+   * hold cannot act.
+   */
+  function buildSection(id: RegionId): HTMLElement[] {
+    const regionState = state.regions[id];
+    if (!regionState || regionState.owner !== actingPlayer) return [];
+    if (!isActiveTeamMember(state, actingPlayer)) return [];
+
+    const heading = document.createElement('h3');
+    heading.className = 'panel__subtitle';
+    heading.textContent = 'Build';
+
+    const purse = document.createElement('p');
+    purse.className = 'panel__purse';
+    const gold = playerById(state, regionState.owner)?.gold ?? 0;
+    const remaining = buildsRemaining(regionState);
+    purse.textContent =
+      remaining > 0
+        ? `${gold} gold · ${remaining} action${remaining === 1 ? '' : 's'} left`
+        : `${gold} gold · this hold has already acted`;
+
+    const grid = document.createElement('div');
+    grid.className = 'panel__build';
+
+    for (const type of RECRUITABLE_TYPES) {
+      grid.append(
+        buildButton(
+          `${type} ${recruitCost(type)}g`,
+          recruitBlockedReason(state, id, type, actingPlayer),
+          () => onRecruit(id, type),
+        ),
+      );
+    }
+
+    for (const type of DEFENSE_TYPES) {
+      const count = regionState.defenses[type];
+      grid.append(
+        buildButton(
+          `${type} ${defenseCost(type)}g (${count}/${defenseCap(type)})`,
+          fortifyBlockedReason(state, id, type, actingPlayer),
+          () => onFortify(id, type),
+        ),
+      );
+    }
+
+    return [heading, purse, grid];
+  }
+
+  function buildButton(label: string, blocked: string | null, onClick: () => void): HTMLElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button--build';
+    button.textContent = label;
+    button.disabled = blocked !== null;
+    button.title = blocked ?? label;
+    if (blocked === null) button.addEventListener('click', onClick);
+    return button;
   }
 
   function garrisonSection(id: RegionId, selectedUnitIds: ReadonlySet<UnitId>): HTMLElement[] {

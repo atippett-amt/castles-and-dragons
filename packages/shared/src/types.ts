@@ -31,6 +31,13 @@ export type UnitType = (typeof UNIT_TYPES)[number];
 export const SIDES = ['north', 'south'] as const;
 export type Side = (typeof SIDES)[number];
 
+/** Units are recruited with Gold; dragons are not — they hatch from eggs. */
+export const RECRUITABLE_TYPES = ['swordsman', 'archer'] as const;
+export type RecruitableType = (typeof RECRUITABLE_TYPES)[number];
+
+export const DEFENSE_TYPES = ['ramparts', 'watchtower', 'scorpion'] as const;
+export type DefenseType = (typeof DEFENSE_TYPES)[number];
+
 /** Normalized (0–1) position for placing a hold's banner over the map image. */
 export interface LabelPos {
   readonly x: number;
@@ -81,6 +88,15 @@ export interface RegionState {
   owner: Owner;
   /** An egg that has not hatched yet. Cleared at the turn-5 hatch (Phase 5). */
   hasEgg: boolean;
+  /** Structures built here. Destroyed when the hold is captured. */
+  readonly defenses: Record<DefenseType, number>;
+  /**
+   * Build actions spent this turn. Reset at the owning team's turn start.
+   * A hold gets `BALANCE.economy.buildsPerHoldPerTurn` of them, and recruiting
+   * competes with fortifying for the same allowance — that tradeoff is the
+   * point, so they deliberately share one counter.
+   */
+  buildsUsed: number;
 }
 
 /**

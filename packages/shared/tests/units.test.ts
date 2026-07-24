@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+﻿import { beforeEach, describe, expect, it } from 'vitest';
 import {
   BALANCE,
   IllegalMoveError,
@@ -169,7 +169,7 @@ describe('legalDestinations', () => {
 describe('moveUnits', () => {
   it('captures an empty neutral hold and flips ownership', () => {
     const movers = unitsIn(state, 'florence').map((u) => u.id);
-    const result = moveUnits(state, graph, movers, 'bailey_springs');
+    const result = moveUnits(state, graph, movers, 'bailey_springs', 'p0');
 
     expect(result.outcome).toBe('captured');
     expect(result.capturedFrom).toBe('neutral');
@@ -181,17 +181,17 @@ describe('moveUnits', () => {
   it('spends one movement point per step', () => {
     const unit = unitsIn(state, 'florence')[0]!;
     expect(unit.movesLeft).toBe(1);
-    moveUnits(state, graph, [unit.id], 'bailey_springs');
+    moveUnits(state, graph, [unit.id], 'bailey_springs', 'p0');
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
     expect(getUnit(state, unit.id).regionId).toBe('bailey_springs');
   });
 
   it('reinforces rather than captures a hold already held', () => {
     const first = unitsIn(state, 'florence')[0]!;
-    moveUnits(state, graph, [first.id], 'bailey_springs');
+    moveUnits(state, graph, [first.id], 'bailey_springs', 'p0');
 
     const second = spawnUnit(state, 'swordsman', 'p0', 'florence');
-    const result = moveUnits(state, graph, [second.id], 'bailey_springs');
+    const result = moveUnits(state, graph, [second.id], 'bailey_springs', 'p0');
     expect(result.outcome).toBe('reinforced');
   });
 
@@ -199,7 +199,7 @@ describe('moveUnits', () => {
     spawnUnit(state, 'swordsman', 'p1', 'bailey_springs');
     const movers = unitsIn(state, 'florence').map((u) => u.id);
 
-    const result = moveUnits(state, graph, movers, 'bailey_springs');
+    const result = moveUnits(state, graph, movers, 'bailey_springs', 'p0');
 
     expect(result.outcome).toBe('battle');
     expect(result.movedUnitIds).toEqual([]);
@@ -213,44 +213,71 @@ describe('moveUnits', () => {
     const dragon = spawnUnit(state, 'dragon', 'p0', 'killen');
     expect(dragon.movesLeft).toBe(2);
 
-    moveUnits(state, graph, [dragon.id], 'muscle_shoals');
+    moveUnits(state, graph, [dragon.id], 'muscle_shoals', 'p0');
     expect(getUnit(state, dragon.id).movesLeft).toBe(1);
 
-    moveUnits(state, graph, [dragon.id], 'littleville');
+    moveUnits(state, graph, [dragon.id], 'littleville', 'p0');
     expect(getUnit(state, dragon.id).regionId).toBe('littleville');
     expect(getUnit(state, dragon.id).movesLeft).toBe(0);
 
-    expect(() => moveUnits(state, graph, [dragon.id], 'whiteoak')).toThrow(IllegalMoveError);
+    expect(() => moveUnits(state, graph, [dragon.id], 'whiteoak', 'p0')).toThrow(IllegalMoveError);
   });
 
   it('rejects an illegal or empty order', () => {
     const unit = unitsIn(state, 'florence')[0]!;
-    expect(() => moveUnits(state, graph, [], 'florence')).toThrow(IllegalMoveError);
-    expect(() => moveUnits(state, graph, [unit.id], 'whiteoak')).toThrow(IllegalMoveError);
-    expect(() => moveUnits(state, graph, [unit.id], 'florence')).toThrow(IllegalMoveError);
+    expect(() => moveUnits(state, graph, [], 'florence', 'p0')).toThrow(IllegalMoveError);
+    expect(() => moveUnits(state, graph, [unit.id], 'whiteoak', 'p0')).toThrow(IllegalMoveError);
+    expect(() => moveUnits(state, graph, [unit.id], 'florence', 'p0')).toThrow(IllegalMoveError);
   });
 
   it('rejects moving units that start in different holds', () => {
     const here = unitsIn(state, 'florence')[0]!;
     const there = spawnUnit(state, 'swordsman', 'p0', 'killen');
-    expect(() => moveUnits(state, graph, [here.id, there.id], 'bailey_springs')).toThrow(
+    expect(() => moveUnits(state, graph, [here.id, there.id], 'bailey_springs', 'p0')).toThrow(
       /same hold/,
     );
   });
 
-  it('rejects moving opposing teams together', () => {
+  it('rejects sweeping another player’s units along with your own', () => {
     const mine = unitsIn(state, 'florence')[0]!;
     const theirs = spawnUnit(state, 'swordsman', 'p1', 'florence');
-    expect(() => moveUnits(state, graph, [mine.id, theirs.id], 'bailey_springs')).toThrow(
-      /opposing team/,
+    expect(() => moveUnits(state, graph, [mine.id, theirs.id], 'bailey_springs', 'p0')).toThrow(
+      /only order your own units/,
     );
+  });
+
+  it('rejects ordering units out of turn', () => {
+    const theirs = unitsIn(state, 'whiteoak').map((u) => u.id);
+    // p1's units, but it is p0's team on the clock.
+    expect(() => moveUnits(state, graph, theirs, 'ford_city', 'p1')).toThrow(/not your team’s turn/);
+  });
+
+  it('does not let an ally order your units, even sharing a turn', () => {
+    // Allies share a turn but not a chain of command. Without this, a human
+    // would end up steering their AI teammate's army, and in Stage B co-op one
+    // player could move another's units out from under them.
+    const coop = createInitialState({
+      map,
+      players: [
+        { id: 'a', name: 'A', teamId: 'allies', isAI: false, startRegion: 'florence' },
+        { id: 'b', name: 'B', teamId: 'allies', isAI: true, startRegion: 'killen' },
+      ],
+      teams: [{ id: 'allies', name: 'Allies' }],
+    });
+
+    const theirs = unitsIn(coop, 'killen').map((unit) => unit.id);
+    expect(() => moveUnits(coop, graph, theirs, 'bailey_springs', 'a')).toThrow(
+      /only order your own units/,
+    );
+    // The rightful owner, on the same turn, has no trouble.
+    expect(moveUnits(coop, graph, theirs, 'bailey_springs', 'b').outcome).toBe('captured');
   });
 
   it('does not treat one neutral hold as allied with another', () => {
     // Neutral garrisons defend independently; if they counted as one bloc a
     // player could stroll from one neutral hold straight into the next.
     const unit = unitsIn(state, 'florence')[0]!;
-    const result = moveUnits(state, graph, [unit.id], 'bailey_springs');
+    const result = moveUnits(state, graph, [unit.id], 'bailey_springs', 'p0');
     expect(result.outcome).toBe('captured');
   });
 });

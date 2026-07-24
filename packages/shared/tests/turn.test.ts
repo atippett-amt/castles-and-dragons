@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+﻿import { beforeEach, describe, expect, it } from 'vitest';
 import {
   activeTeam,
   buildGraph,
@@ -44,7 +44,7 @@ beforeEach(() => {
 describe('endTurn', () => {
   it('passes play to the next team', () => {
     expect(activeTeam(state).id).toBe('t0');
-    const change = endTurn(state);
+    const change = endTurn(state, graph);
     expect(change.activeTeamId).toBe('t1');
     expect(activeTeam(state).id).toBe('t1');
   });
@@ -53,28 +53,28 @@ describe('endTurn', () => {
     expect(state.turn).toBe(1);
 
     // First team ends: still turn 1, it is simply the other team's move.
-    expect(endTurn(state).roundCompleted).toBe(false);
+    expect(endTurn(state, graph).roundCompleted).toBe(false);
     expect(state.turn).toBe(1);
 
     // Second team ends: the round is complete, so the counter ticks.
-    expect(endTurn(state).roundCompleted).toBe(true);
+    expect(endTurn(state, graph).roundCompleted).toBe(true);
     expect(state.turn).toBe(2);
     expect(activeTeam(state).id).toBe('t0');
   });
 
   it('ticks once per round regardless of team count', () => {
     const four = newGame(4);
-    for (let i = 0; i < 4; i++) endTurn(four);
+    for (let i = 0; i < 4; i++) endTurn(four, graph);
     expect(four.turn).toBe(2);
 
-    for (let i = 0; i < 8; i++) endTurn(four);
+    for (let i = 0; i < 8; i++) endTurn(four, graph);
     expect(four.turn).toBe(4);
   });
 
   it('climbs steadily across many rounds', () => {
     for (let round = 0; round < 20; round++) {
-      endTurn(state);
-      endTurn(state);
+      endTurn(state, graph);
+      endTurn(state, graph);
     }
     expect(state.turn).toBe(21);
   });
@@ -83,13 +83,13 @@ describe('endTurn', () => {
 describe('movement refresh', () => {
   it('restores movement to the team whose turn is starting', () => {
     const unit = unitsIn(state, 'florence')[0]!;
-    moveUnits(state, graph, [unit.id], 'underwood_petersville');
+    moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state); // t1's turn — t0 stays spent
+    endTurn(state, graph); // t1's turn â€” t0 stays spent
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state); // back to t0 — refreshed
+    endTurn(state, graph); // back to t0 â€” refreshed
     expect(getUnit(state, unit.id).movesLeft).toBe(1);
   });
 
@@ -97,23 +97,23 @@ describe('movement refresh', () => {
     const theirs = unitsIn(state, 'whiteoak')[0]!;
     theirs.movesLeft = 0;
 
-    endTurn(state); // t1 starts, so t1 refreshes
+    endTurn(state, graph); // t1 starts, so t1 refreshes
     expect(getUnit(state, theirs.id).movesLeft).toBe(1);
 
     const mine = unitsIn(state, 'florence')[0]!;
     mine.movesLeft = 0;
-    endTurn(state); // t0 starts, t1 keeps whatever it has left
+    endTurn(state, graph); // t0 starts, t1 keeps whatever it has left
     expect(getUnit(state, mine.id).movesLeft).toBe(1);
   });
 
   it('lets a stack move again on the following turn', () => {
     const unit = unitsIn(state, 'florence')[0]!;
-    moveUnits(state, graph, [unit.id], 'underwood_petersville');
+    moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');
 
-    endTurn(state);
-    endTurn(state);
+    endTurn(state, graph);
+    endTurn(state, graph);
 
-    moveUnits(state, graph, [unit.id], 'bailey_springs');
+    moveUnits(state, graph, [unit.id], 'bailey_springs', 'p0');
     expect(getUnit(state, unit.id).regionId).toBe('bailey_springs');
   });
 });
@@ -127,8 +127,8 @@ describe('hasReachedTurnLimit', () => {
 
   it('is true once play runs past the final turn', () => {
     state.turn = state.turnLimit;
-    endTurn(state);
-    endTurn(state);
+    endTurn(state, graph);
+    endTurn(state, graph);
     expect(state.turn).toBe(state.turnLimit + 1);
     expect(hasReachedTurnLimit(state)).toBe(true);
   });

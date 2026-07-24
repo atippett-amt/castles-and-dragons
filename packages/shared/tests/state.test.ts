@@ -69,10 +69,30 @@ describe('createInitialState', () => {
     expect(neutral).toHaveLength(map.regions.length - count);
   });
 
-  it('gives every player the starting treasury', () => {
+  it('opens the first team’s turn properly, paying it income at once', () => {
+    // Turn 1 is a normal turn, not a special case: the team on the clock
+    // collects immediately. Every other team collects as its own turn begins,
+    // still within round 1, so nobody gets an extra payday.
     const state = createInitialState(setupFor(3));
+    const opening = activeTeam(state).id;
+
     for (const player of state.players) {
-      expect(player.gold).toBe(BALANCE.economy.startingGold);
+      const home = regionsOwnedBy(state, player.id)[0]!;
+      const income = map.regions.find((region) => region.id === home.id)!.goldPerTurn;
+      const expected =
+        player.teamId === opening
+          ? BALANCE.economy.startingGold + income
+          : BALANCE.economy.startingGold;
+
+      expect(player.gold).toBe(expected);
+    }
+  });
+
+  it('gives every hold a full build allowance and no defenses', () => {
+    const state = createInitialState(setupFor(2));
+    for (const region of Object.values(state.regions)) {
+      expect(region.buildsUsed).toBe(0);
+      expect(region.defenses).toEqual({ ramparts: 0, watchtower: 0, scorpion: 0 });
     }
   });
 

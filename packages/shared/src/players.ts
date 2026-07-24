@@ -8,8 +8,12 @@
 
 import { NEUTRAL, type GameState, type Owner, type Player, type PlayerId, type Team, type TeamId } from './types';
 
+export function playerById(state: GameState, playerId: PlayerId): Player | null {
+  return state.players.find((player) => player.id === playerId) ?? null;
+}
+
 export function teamOf(state: GameState, playerId: PlayerId): TeamId | null {
-  return state.players.find((player) => player.id === playerId)?.teamId ?? null;
+  return playerById(state, playerId)?.teamId ?? null;
 }
 
 /**

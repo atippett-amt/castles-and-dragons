@@ -7,7 +7,10 @@
  */
 
 import { BALANCE } from './balance';
+import { emptyDefenses } from './defense';
+import { buildGraph } from './graph';
 import { createRng } from './rng';
+import { beginTeamTurn } from './turn';
 import { spawnUnit } from './units';
 import {
   NEUTRAL,
@@ -169,6 +172,8 @@ export function createInitialState(options: CreateStateOptions): GameState {
       owner: ownerByRegion.get(region.id) ?? NEUTRAL,
       // Every hold starts with an egg; they all hatch on turn 5 (Phase 5).
       hasEgg: region.dragonEgg,
+      defenses: emptyDefenses(),
+      buildsUsed: 0,
     };
   }
 
@@ -201,6 +206,11 @@ export function createInitialState(options: CreateStateOptions): GameState {
     for (let i = 0; i < BALANCE.start.swordsmen; i++) spawnUnit(state, 'swordsman', player.id, home);
     for (let i = 0; i < BALANCE.start.archers; i++) spawnUnit(state, 'archer', player.id, home);
   }
+
+  // Open the first team's turn properly rather than treating turn 1 as a
+  // special case: they collect income and start with a full build allowance,
+  // exactly as every later turn does.
+  beginTeamTurn(state, buildGraph(map), state.teams[0]?.id ?? '');
 
   return state;
 }
