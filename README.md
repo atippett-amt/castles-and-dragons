@@ -50,16 +50,29 @@ Two rules that must hold for the whole project:
 2. **All tunable numbers live in `packages/shared/src/balance.ts`.** No cost,
    stat, dragon curve value, or defense effect is hardcoded anywhere else.
 
-## Deploying to Cloudflare Pages
+## Deploying
 
-Not yet connected — it needs an account login. Settings to use:
+Deployed as a **Cloudflare Worker serving static assets**, not a Pages project.
+Cloudflare's own guidance is to start new projects on Workers — Pages still works
+but no longer receives feature investment — and Stage B needs a Worker with
+Durable Objects regardless. Shipping Stage A this way means Stage B extends the
+same Worker instead of adding a second service.
+
+Configuration lives in [`wrangler.jsonc`](wrangler.jsonc). Dashboard settings:
 
 | Field | Value |
 |---|---|
 | Build command | `npm run build -w client` |
-| Build output directory | `packages/client/dist` |
-| Environment variable | `NODE_VERSION` = `20` |
-| Root directory | *(leave as the repo root)* |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | *(leave as the repo root — npm workspaces install from here)* |
+
+Node version comes from `.nvmrc`; no `NODE_VERSION` variable is needed.
+
+`wrangler` is intentionally **not** a devDependency. It pulls `workerd` and
+`esbuild`, both of which ship platform-specific binaries — precisely the kind of
+dependency that produced the Windows-vs-Linux lockfile break described above.
+Letting the deploy command fetch it via `npx` keeps those binaries out of
+`package-lock.json`.
 
 ## Phase status
 

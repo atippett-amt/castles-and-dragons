@@ -1,0 +1,18 @@
+{
+  // Stage A ships as a static-asset-only Worker: no server code, no cost.
+  //
+  // This file sits at the repo root on purpose. The repo is an npm workspace,
+  // and without a config here `wrangler deploy` refuses to run ("application
+  // detection logic has been run in the root of a workspace") because it cannot
+  // tell which workspace package it is meant to deploy.
+  //
+  // There is deliberately no "main": a Worker with only an `assets` block
+  // serves the built client directly. Stage B (Phase 9) adds "main" pointing at
+  // packages/server, plus the Durable Object bindings — the same Worker then
+  // serves the game AND hosts authoritative state.
+  "name": "castles-and-dragons",
+  "compatibility_date": "2026-07-24",
+  "assets": {
+    "directory": "./packages/client/dist"
+  }
+}
