@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+﻿import { beforeEach, describe, expect, it } from 'vitest';
 import {
   activeTeam,
   buildGraph,
@@ -83,13 +83,13 @@ describe('endTurn', () => {
 describe('movement refresh', () => {
   it('restores movement to the team whose turn is starting', () => {
     const unit = unitsIn(state, 'florence')[0]!;
-    moveUnits(state, graph, [unit.id], 'underwood_petersville');
+    moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state, graph); // t1's turn — t0 stays spent
+    endTurn(state, graph); // t1's turn â€” t0 stays spent
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state, graph); // back to t0 — refreshed
+    endTurn(state, graph); // back to t0 â€” refreshed
     expect(getUnit(state, unit.id).movesLeft).toBe(1);
   });
 
@@ -108,12 +108,12 @@ describe('movement refresh', () => {
 
   it('lets a stack move again on the following turn', () => {
     const unit = unitsIn(state, 'florence')[0]!;
-    moveUnits(state, graph, [unit.id], 'underwood_petersville');
+    moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');
 
     endTurn(state, graph);
     endTurn(state, graph);
 
-    moveUnits(state, graph, [unit.id], 'bailey_springs');
+    moveUnits(state, graph, [unit.id], 'bailey_springs', 'p0');
     expect(getUnit(state, unit.id).regionId).toBe('bailey_springs');
   });
 });

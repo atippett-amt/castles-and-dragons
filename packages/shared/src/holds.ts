@@ -17,6 +17,7 @@ import {
   NEUTRAL,
   type DefenseType,
   type GameState,
+  type PlayerId,
   type RecruitableType,
   type RegionId,
   type RegionState,
@@ -79,15 +80,26 @@ export function resetBuilds(state: GameState, teamId: TeamId): void {
 // Build actions
 // ---------------------------------------------------------------------------
 
-/** Conditions common to recruiting and fortifying, or null when clear. */
-function buildGateReason(state: GameState, regionId: RegionId, cost: number): string | null {
+/**
+ * Conditions common to recruiting and fortifying, or null when clear.
+ *
+ * Build orders are scoped to a single player. Allies share a turn but not a
+ * treasury, so a teammate may not spend your gold or act at your holds.
+ */
+function buildGateReason(
+  state: GameState,
+  regionId: RegionId,
+  cost: number,
+  actingPlayer: PlayerId,
+): string | null {
   const region = getRegion(state, regionId);
 
   if (region.owner === NEUTRAL) return 'a neutral hold cannot build';
-  if (!isActiveTeamMember(state, region.owner)) return 'not this team’s turn';
+  if (region.owner !== actingPlayer) return 'that hold belongs to another player';
+  if (!isActiveTeamMember(state, actingPlayer)) return 'not this team’s turn';
   if (buildsRemaining(region) <= 0) return 'this hold has already acted this turn';
 
-  const player = playerById(state, region.owner);
+  const player = playerById(state, actingPlayer);
   if (!player) return 'unknown owner';
   if (player.gold < cost) return `needs ${cost} gold, has ${player.gold}`;
 
@@ -98,8 +110,9 @@ export function recruitBlockedReason(
   state: GameState,
   regionId: RegionId,
   type: RecruitableType,
+  actingPlayer: PlayerId,
 ): string | null {
-  return buildGateReason(state, regionId, recruitCost(type));
+  return buildGateReason(state, regionId, recruitCost(type), actingPlayer);
 }
 
 /**
@@ -109,12 +122,17 @@ export function recruitBlockedReason(
  * build per hold per turn it is not abusable; make them arrive spent by setting
  * movesLeft to 0 here if playtesting says otherwise.
  */
-export function recruit(state: GameState, regionId: RegionId, type: RecruitableType): Unit {
-  const reason = recruitBlockedReason(state, regionId, type);
+export function recruit(
+  state: GameState,
+  regionId: RegionId,
+  type: RecruitableType,
+  actingPlayer: PlayerId,
+): Unit {
+  const reason = recruitBlockedReason(state, regionId, type, actingPlayer);
   if (reason) throw new BuildError(reason);
 
   const region = getRegion(state, regionId);
-  const player = playerById(state, region.owner);
+  const player = playerById(state, actingPlayer);
   if (!player) throw new BuildError('unknown owner');
 
   player.gold -= recruitCost(type);
@@ -126,19 +144,25 @@ export function fortifyBlockedReason(
   state: GameState,
   regionId: RegionId,
   type: DefenseType,
+  actingPlayer: PlayerId,
 ): string | null {
   const region = getRegion(state, regionId);
   if (isAtCap(region, type)) return `${type} is at its limit of ${defenseCap(type)}`;
-  return buildGateReason(state, regionId, defenseCost(type));
+  return buildGateReason(state, regionId, defenseCost(type), actingPlayer);
 }
 
 /** Constructs one defensive structure at a hold. */
-export function fortify(state: GameState, regionId: RegionId, type: DefenseType): void {
-  const reason = fortifyBlockedReason(state, regionId, type);
+export function fortify(
+  state: GameState,
+  regionId: RegionId,
+  type: DefenseType,
+  actingPlayer: PlayerId,
+): void {
+  const reason = fortifyBlockedReason(state, regionId, type, actingPlayer);
   if (reason) throw new BuildError(reason);
 
   const region = getRegion(state, regionId);
-  const player = playerById(state, region.owner);
+  const player = playerById(state, actingPlayer);
   if (!player) throw new BuildError('unknown owner');
 
   player.gold -= defenseCost(type);

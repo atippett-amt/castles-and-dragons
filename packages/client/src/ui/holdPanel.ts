@@ -17,6 +17,7 @@ import {
   type DefenseType,
   type GameState,
   type Graph,
+  type PlayerId,
   type RecruitableType,
   type RegionId,
   type Unit,
@@ -32,6 +33,8 @@ export interface HoldPanel {
 export interface HoldPanelOptions {
   readonly graph: Graph;
   readonly state: GameState;
+  /** The player this browser controls; build orders are issued as them. */
+  readonly actingPlayer: PlayerId;
   /** True when the unit belongs to the active team and can still move. */
   readonly canOrder: (unit: Unit) => boolean;
   readonly onToggleUnit: (unitId: UnitId) => void;
@@ -42,7 +45,8 @@ export interface HoldPanelOptions {
 
 /** Detail card for the selected hold, including its garrison. */
 export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
-  const { graph, state, canOrder, onToggleUnit, onSelectAll, onRecruit, onFortify } = options;
+  const { graph, state, actingPlayer, canOrder, onToggleUnit, onSelectAll, onRecruit, onFortify } =
+    options;
 
   const element = document.createElement('aside');
   element.className = 'panel';
@@ -119,8 +123,8 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
    */
   function buildSection(id: RegionId): HTMLElement[] {
     const regionState = state.regions[id];
-    if (!regionState || regionState.owner === NEUTRAL) return [];
-    if (!isActiveTeamMember(state, regionState.owner)) return [];
+    if (!regionState || regionState.owner !== actingPlayer) return [];
+    if (!isActiveTeamMember(state, actingPlayer)) return [];
 
     const heading = document.createElement('h3');
     heading.className = 'panel__subtitle';
@@ -142,7 +146,7 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       grid.append(
         buildButton(
           `${type} ${recruitCost(type)}g`,
-          recruitBlockedReason(state, id, type),
+          recruitBlockedReason(state, id, type, actingPlayer),
           () => onRecruit(id, type),
         ),
       );
@@ -153,7 +157,7 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       grid.append(
         buildButton(
           `${type} ${defenseCost(type)}g (${count}/${defenseCap(type)})`,
-          fortifyBlockedReason(state, id, type),
+          fortifyBlockedReason(state, id, type, actingPlayer),
           () => onFortify(id, type),
         ),
       );

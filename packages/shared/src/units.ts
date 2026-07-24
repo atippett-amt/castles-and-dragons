@@ -13,7 +13,7 @@
 
 import { BALANCE, dragonStat } from './balance';
 import { canTraverse, type Graph } from './graph';
-import { areAllied } from './players';
+import { areAllied, isActiveTeamMember } from './players';
 import { getRegion } from './regions';
 import {
   NEUTRAL,
@@ -193,7 +193,12 @@ export function legalDestinations(
 }
 
 /**
- * Moves a stack one step.
+ * Moves a stack one step, on behalf of `actingPlayer`.
+ *
+ * Orders are scoped to a single player, not to their whole team. Allies share
+ * a turn but not a purse or a chain of command: one player may never move
+ * another's units, even a teammate's. In Stage B the Durable Object knows who
+ * sent an order and passes them here, so the same check guards the network.
  *
  * Ownership only changes when the destination has no defenders. If defenders
  * are present this reports 'battle' and changes nothing — Phase 4 replaces that
@@ -204,8 +209,13 @@ export function moveUnits(
   graph: Graph,
   unitIds: readonly UnitId[],
   to: RegionId,
+  actingPlayer: PlayerId,
 ): MoveResult {
   if (unitIds.length === 0) throw new IllegalMoveError('no units selected');
+
+  if (!isActiveTeamMember(state, actingPlayer)) {
+    throw new IllegalMoveError('it is not your team’s turn');
+  }
 
   const units = unitIds.map((id) => getUnit(state, id));
   const first = units[0];
@@ -216,10 +226,11 @@ export function moveUnits(
     throw new IllegalMoveError('all units in a move must start in the same hold');
   }
 
-  const mover = first.owner;
-  if (units.some((unit) => !areAllied(state, unit.owner, mover))) {
-    throw new IllegalMoveError('cannot move units of an opposing team together');
+  if (units.some((unit) => unit.owner !== actingPlayer)) {
+    throw new IllegalMoveError('you can only order your own units');
   }
+
+  const mover = actingPlayer;
 
   for (const unit of units) {
     const reason = moveBlockedReason(state, graph, unit, to);
