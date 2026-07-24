@@ -210,9 +210,13 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       label.className = 'unit__name';
       label.textContent = unit.type;
 
+      const profile = unitProfile(unit.type, state.turn);
+
       const health = document.createElement('span');
       health.className = 'unit__hp';
-      health.textContent = `${unit.hp} / ${unitProfile(unit.type, state.turn).hp} hp`;
+      // Attack is shown alongside health because a dragon's grows every turn,
+      // and that growth is the clock the whole late game runs on.
+      health.textContent = `${unit.hp}/${profile.hp} hp · ${profile.atk} atk`;
 
       const moves = document.createElement('span');
       moves.className = 'unit__moves';

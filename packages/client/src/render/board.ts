@@ -87,12 +87,17 @@ export function createBoard(options: BoardOptions): Board {
         const egg = banner.querySelector<HTMLElement>('.banner__egg');
         if (egg) egg.hidden = !regionState.hasEgg;
 
-        const garrison = unitsIn(state, region.id).length;
+        const garrison = unitsIn(state, region.id);
         const count = banner.querySelector<HTMLElement>('.banner__count');
         if (count) {
-          count.textContent = String(garrison);
-          count.hidden = garrison === 0;
+          count.textContent = String(garrison.length);
+          count.hidden = garrison.length === 0;
         }
+
+        // A dragon in the hold is the single most important thing on the board,
+        // so it gets its own mark rather than hiding inside the garrison count.
+        const dragon = banner.querySelector<HTMLElement>('.banner__dragon');
+        if (dragon) dragon.hidden = !garrison.some((unit) => unit.type === 'dragon');
       }
     },
   };
@@ -125,7 +130,13 @@ function createBanner(region: RegionDef): HTMLButtonElement {
   egg.textContent = '●';
   egg.setAttribute('aria-label', 'dragon egg');
 
-  banner.append(name, count, egg);
+  const dragon = document.createElement('span');
+  dragon.className = 'banner__dragon';
+  dragon.textContent = '▲';
+  dragon.hidden = true;
+  dragon.setAttribute('aria-label', 'dragon');
+
+  banner.append(name, count, egg, dragon);
   return banner;
 }
 

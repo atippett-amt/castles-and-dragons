@@ -232,6 +232,17 @@ body {
   display: none;
 }
 
+/* A hatched dragon. Deliberately louder than the egg it replaces. */
+.banner__dragon {
+  color: #e8563f;
+  font-size: 0.85em;
+  text-shadow: 0 0 6px rgb(232 86 63 / 70%);
+}
+
+.banner__dragon[hidden] {
+  display: none;
+}
+
 /* Garrison size. Hidden at zero rather than showing a bare "0". */
 .banner__count {
   padding: 0 0.25rem;

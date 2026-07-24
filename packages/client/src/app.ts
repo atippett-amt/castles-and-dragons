@@ -172,6 +172,16 @@ export function createApp(root: HTMLElement): void {
     const change = endTurn(state, graph);
     selectedRegion = null;
     selectedUnits = new Set();
+
+    if (change.hatchings.length > 0) {
+      // The one turn in the game that changes everything at once.
+      hud.say(
+        `The eggs have hatched — ${change.hatchings.length} dragons wake across the realm. Turn ${change.turn}.`,
+      );
+      render();
+      return;
+    }
+
     announceTurn(change.turn, change.incomeCollected);
     render();
   }
