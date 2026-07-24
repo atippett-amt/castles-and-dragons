@@ -5,7 +5,8 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../shared/src/*"]
+      "@shared/*": ["../shared/src/*"],
+      "@data/*": ["../shared/data/*"]
     }
   },
   "include": ["src/**/*.ts", "vite.config.ts"]
