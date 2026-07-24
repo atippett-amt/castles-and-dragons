@@ -79,5 +79,6 @@ Letting the deploy command fetch it via `npx` keeps those binaries out of
 ## Phase status
 
 - [x] **Phase 0** — scaffold, deploy config, map renders full-viewport, tests green, live URL verified
-- [ ] Phase 1 — region graph, map data, rendering
-- [ ] Phases 2–8 — units, economy, combat, dragons, AI, victory, setup/save
+- [x] **Phase 1** — region graph, map loader/validation, seeded RNG, initial state, board rendering
+- [ ] Phase 2 — units, movement, turn counter
+- [ ] Phases 3–8 — economy, combat, dragons, AI, victory, setup/save

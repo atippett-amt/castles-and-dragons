@@ -32,11 +32,26 @@ far enough to touch Muscle Shoals along the stretch immediately south of Ford
 City. The original graph omitted this, which left Whiteoak as a dead-end corner
 reachable only through Ford City or Littleville.
 
-## Open question, deliberately not changed
+## Result: a second water edge added (resolved)
 
-The map defines exactly **one** `water` edge (Killen–Muscle Shoals). Dragons are
-designed to "ignore the lake entirely," but with a single open-water route that
-ability is nearly inert — the eastern flank has one, the western half of the lake
-has none. A second water edge (Florence–Ford City is the geographically natural
-candidate) would make dragon flanking matter on both sides. Left alone for now;
-revisit after the map renders and the graph is visible.
+The map originally defined exactly **one** `water` edge (Killen–Muscle Shoals),
+which left dragons' defining ability — ignoring the lake — nearly inert, with a
+single crossing on the eastern flank and none in the centre or west.
+
+**`florence`–`ford_city` (water)** was added after checking the art. Just east of
+the Florence–Muscle Shoals bridge the lake pinches to a narrow neck: Florence's
+southeastern shore and Ford City's northwestern shore face each other across it,
+at roughly `x 0.545, y 0.47` — the same point where the Muscle Shoals / Ford City
+land border meets the waterline. The crossing is real, not invented to balance
+the graph.
+
+Wilson Lake now has **five** crossings in total: three bridges open to everyone,
+and two open-water routes only dragons can use.
+
+## Still worth watching
+
+Sheffield and White House Springs sit at the western end with no water route at
+all, so the far west remains a land-only pocket. That is probably correct — the
+lake genuinely narrows to a river there — but if the west ever feels
+strategically inert once dragons are flying in Phase 5, this is the place to
+look.

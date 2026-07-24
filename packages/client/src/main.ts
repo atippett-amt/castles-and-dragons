@@ -1,28 +1,41 @@
 import './style.css';
-import { BALANCE } from '@shared/index';
+import { createBoard } from './render/board';
+import { createDefaultGame } from './setup/defaultGame';
+import { createHoldPanel } from './ui/holdPanel';
+import { createHud } from './ui/hud';
 
 /**
- * Phase 0 — the board is just the map art, letterboxed to fill the viewport.
+ * Phase 1 — the map is a live region graph.
  *
- * The badge is deliberate scaffolding: it reads a value out of the `shared`
- * package, which proves the monorepo wiring (workspace + alias + TS) works
- * end-to-end in both `dev` and `build`. Phase 1 replaces it with a real HUD.
+ * Ten holds render with owner colours and their dragon eggs, every edge is
+ * drawn (land and bridge solid, water dashed), and clicking a hold shows its
+ * terrain, income and borders. There are no units yet; Phase 2 adds movement.
  */
 function mount(root: HTMLElement): void {
-  const board = document.createElement('div');
-  board.className = 'board';
+  const { map, graph, state } = createDefaultGame();
 
-  const map = document.createElement('img');
-  map.className = 'board__map';
-  map.src = 'assets/map.png';
-  map.alt = 'The Wilson Lake Realms — ten holds divided by Wilson Lake';
+  const hud = createHud(state);
+  const panel = createHoldPanel({ graph, state });
+  const board = createBoard({
+    map,
+    graph,
+    state,
+    onSelect: (id) => panel.show(id),
+  });
 
-  const badge = document.createElement('div');
-  badge.className = 'badge';
-  badge.textContent = `Wilson Lake Realms · Turn 1 / ${BALANCE.game.turnLimit}`;
+  const stage = document.createElement('main');
+  stage.className = 'stage';
+  stage.append(board.element, panel.element);
 
-  board.append(map, badge);
-  root.append(board);
+  // Clicking the bare map (not a banner) clears the selection.
+  stage.addEventListener('click', (event) => {
+    if (event.target === stage || event.target === board.element) {
+      board.select(null);
+      panel.show(null);
+    }
+  });
+
+  root.append(hud.element, stage);
 }
 
 const root = document.querySelector<HTMLElement>('#app');

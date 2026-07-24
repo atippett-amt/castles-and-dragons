@@ -3,7 +3,7 @@
   "image": "assets/map.png",
   "lake": "Wilson Lake",
   "turnLimit": 100,
-  "notes": "Adjacency verified against the map art (see docs/map-verification.md). THREE bridges cross Wilson Lake: Florence-Sheffield, Florence-Muscle Shoals, and Killen-Ford City. Land units cross land + bridge edges only. DRAGONS cross land, bridge, AND water (they ignore the lake entirely). Every region starts with one dragon egg (dragonEgg:true) that hatches on turn 5 for whoever holds the region.",
+  "notes": "Adjacency verified against the map art (see docs/map-verification.md). THREE bridges cross Wilson Lake: Florence-Sheffield, Florence-Muscle Shoals, and Killen-Ford City. TWO open-water crossings: Killen-Muscle Shoals (east) and Florence-Ford City (centre). Land units cross land + bridge edges only. DRAGONS cross land, bridge, AND water (they ignore the lake entirely). Every region starts with one dragon egg (dragonEgg:true) that hatches on turn 5 for whoever holds the region.",
   "edgeTypes": {
     "land": "normal border; passable by Swordsman, Archer, Dragon",
     "bridge": "a lake crossing over a bridge; passable by all units; strategic chokepoint",
@@ -37,6 +37,7 @@
     { "a": "florence",              "b": "muscle_shoals",        "type": "bridge" },
     { "a": "killen",                "b": "ford_city",            "type": "bridge" },
     { "a": "killen",                "b": "muscle_shoals",        "type": "water" },
+    { "a": "florence",              "b": "ford_city",            "type": "water" },
 
     { "a": "sheffield",             "b": "muscle_shoals",        "type": "land" },
     { "a": "sheffield",             "b": "white_house_springs",  "type": "land" },
