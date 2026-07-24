@@ -14,6 +14,8 @@ export * from './rng';
 export * from './graph';
 export * from './players';
 export * from './regions';
+export * from './defense';
 export * from './units';
+export * from './holds';
 export * from './turn';
 export * from './state';

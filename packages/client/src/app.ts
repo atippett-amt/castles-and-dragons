@@ -1,10 +1,14 @@
 import {
   activeTeam,
   endTurn,
+  fortify,
   isActiveTeamMember,
   legalDestinations,
   moveUnits,
+  recruit,
   unitsIn,
+  type DefenseType,
+  type RecruitableType,
   type RegionId,
   type Unit,
   type UnitId,
@@ -38,7 +42,15 @@ export function createApp(root: HTMLElement): void {
   const holdName = (id: RegionId): string => graph.regions.get(id)?.name ?? id;
 
   const hud = createHud({ state, onEndTurn });
-  const panel = createHoldPanel({ graph, state, canOrder, onToggleUnit, onSelectAll });
+  const panel = createHoldPanel({
+    graph,
+    state,
+    canOrder,
+    onToggleUnit,
+    onSelectAll,
+    onRecruit,
+    onFortify,
+  });
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
 
   /** Holds the current selection could march into this turn. */
@@ -111,11 +123,36 @@ export function createApp(root: HTMLElement): void {
     render();
   }
 
+  function onRecruit(regionId: RegionId, type: RecruitableType): void {
+    try {
+      recruit(state, regionId, type);
+      hud.say(`Raised a ${type} at ${holdName(regionId)}.`);
+      // Re-open the hold so the new unit appears and is picked up for orders.
+      selectRegion(regionId);
+    } catch (error) {
+      hud.say(error instanceof Error ? error.message : 'Cannot recruit', 'warn');
+      render();
+    }
+  }
+
+  function onFortify(regionId: RegionId, type: DefenseType): void {
+    try {
+      fortify(state, regionId, type);
+      hud.say(`Built ${type} at ${holdName(regionId)}.`);
+      render();
+    } catch (error) {
+      hud.say(error instanceof Error ? error.message : 'Cannot build', 'warn');
+      render();
+    }
+  }
+
   function onEndTurn(): void {
-    const change = endTurn(state);
+    const change = endTurn(state, graph);
     selectedRegion = null;
     selectedUnits = new Set();
-    hud.say(`${activeTeam(state).name} to move — turn ${change.turn}.`);
+    hud.say(
+      `${activeTeam(state).name} to move — turn ${change.turn}. Collected ${change.incomeCollected} gold.`,
+    );
     render();
   }
 

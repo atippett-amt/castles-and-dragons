@@ -30,6 +30,9 @@ export function createHud(options: HudOptions): Hud {
   const team = document.createElement('span');
   team.className = 'hud__team';
 
+  const treasury = document.createElement('span');
+  treasury.className = 'hud__treasury';
+
   const message = document.createElement('span');
   message.className = 'hud__message';
 
@@ -39,7 +42,7 @@ export function createHud(options: HudOptions): Hud {
   endTurn.textContent = 'End Turn';
   endTurn.addEventListener('click', onEndTurn);
 
-  element.append(realm, turn, team, message, createLegend(), endTurn);
+  element.append(realm, turn, team, treasury, message, createLegend(), endTurn);
 
   function refresh(): void {
     turn.textContent = `Turn ${state.turn} / ${state.turnLimit}`;
@@ -50,6 +53,17 @@ export function createHud(options: HudOptions): Hud {
 
     team.textContent = current.name;
     team.style.setProperty('--owner', first ? colorForOwner(state, first.id) : 'transparent');
+
+    // Only the acting team's purses — showing every player's gold would leak
+    // information the opponent should not have once Stage B is multiplayer.
+    treasury.replaceChildren();
+    for (const player of members) {
+      const entry = document.createElement('span');
+      entry.className = 'purse';
+      entry.style.setProperty('--owner', colorForOwner(state, player.id));
+      entry.textContent = `${player.name} ${player.gold}g`;
+      treasury.append(entry);
+    }
   }
 
   function say(text: string, tone: 'info' | 'warn' = 'info'): void {
