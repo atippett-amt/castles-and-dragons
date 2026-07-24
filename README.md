@@ -4,7 +4,9 @@ A browser-based, turn-based conquest game on the **Wilson Lake Realms** — ten
 holds split north/south by a lake, three bridges, and exactly ten dragons.
 The only victory is domination. Games run a hard 100 turns.
 
-- **Stage A** — single-player vs AI, shipping free and static on Cloudflare Pages.
+**Live:** https://castles-and-dragons.austin-tippett.workers.dev/
+
+- **Stage A** — single-player vs AI, shipping free and static on Cloudflare Workers.
 - **Stage B** — co-op multiplayer (up to 8, teams) on Workers + Durable Objects.
 
 See [`dragon-domination-build-plan.md`](docs/dragon-domination-build-plan.md) for
@@ -76,6 +78,6 @@ Letting the deploy command fetch it via `npx` keeps those binaries out of
 
 ## Phase status
 
-- [x] **Phase 0** — scaffold, Pages config, map renders full-viewport, tests green
+- [x] **Phase 0** — scaffold, deploy config, map renders full-viewport, tests green, live URL verified
 - [ ] Phase 1 — region graph, map data, rendering
 - [ ] Phases 2–8 — units, economy, combat, dragons, AI, victory, setup/save
