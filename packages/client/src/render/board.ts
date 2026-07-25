@@ -38,6 +38,8 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export interface Board {
   readonly element: HTMLElement;
+  /** The map art itself, so the viewport can size it for zooming. */
+  readonly image: HTMLImageElement;
   /** Repaints owner colours, garrison counts, eggs and selection from state. */
   refresh(): void;
   select(id: RegionId | null): void;
@@ -123,6 +125,7 @@ export function createBoard(options: BoardOptions): Board {
 
   const board: Board = {
     element,
+    image,
     get selected() {
       return selected;
     },
