@@ -308,6 +308,27 @@ describe('defence reduction', () => {
   });
 });
 
+describe('hit points stay whole', () => {
+  it('never leaves a unit on a fractional hit point', () => {
+    // The variance multiplier and the defence reduction are both fractions, so
+    // unrounded damage put units on 73.99799986699969 hp — which reached the UI.
+    for (let seed = 1; seed <= 20; seed++) {
+      const scenario = siege({
+        attackers: Array(3).fill('swordsman'),
+        defenders: ['archer', 'swordsman', 'dragon'],
+        defenses: { ramparts: 2, watchtower: 1, scorpion: 1 },
+        at: MOUNTAIN,
+        seed,
+      });
+      fight(scenario, MOUNTAIN);
+
+      for (const unit of Object.values(scenario.state.units)) {
+        expect(Number.isInteger(unit.hp)).toBe(true);
+      }
+    }
+  });
+});
+
 describe('determinism', () => {
   it('replays identically from the same seed', () => {
     const build = () =>

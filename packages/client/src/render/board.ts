@@ -10,6 +10,8 @@ export interface Board {
   select(id: RegionId | null): void;
   /** Marks holds the current selection could move into. */
   highlight(ids: ReadonlySet<RegionId>): void;
+  /** Floats a health change above a hold, with what it has left. */
+  flash(regionId: RegionId, delta: number, remaining: number): void;
   readonly selected: RegionId | null;
 }
 
@@ -74,6 +76,32 @@ export function createBoard(options: BoardOptions): Board {
       for (const [regionId, banner] of banners) {
         banner.classList.toggle('banner--target', ids.has(regionId));
       }
+    },
+    flash(regionId, delta, remaining) {
+      const banner = banners.get(regionId);
+      if (!banner) return;
+
+      const float = document.createElement('div');
+      float.className = `float float--${delta < 0 ? 'loss' : 'gain'}`;
+      // Anchored to the same normalized position as the banner it belongs to,
+      // then lifted clear of it by the transform in CSS.
+      float.style.left = banner.style.left;
+      float.style.top = banner.style.top;
+
+      const change = document.createElement('span');
+      change.className = 'float__delta';
+      change.textContent = `${delta > 0 ? '+' : ''}${delta} hp`;
+
+      const left = document.createElement('span');
+      left.className = 'float__remaining';
+      left.textContent = remaining > 0 ? `${remaining} left` : 'emptied';
+
+      float.append(change, left);
+      element.append(float);
+
+      // Removed on a timer rather than animationend, so it still cleans itself
+      // up for players who have animations turned off.
+      setTimeout(() => float.remove(), 2000);
     },
     refresh() {
       for (const region of map.regions) {

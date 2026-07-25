@@ -85,9 +85,13 @@ function focusRank(unit: Unit): number {
 /**
  * Concentrates `amount` damage on a stack, killing in focus order and carrying
  * the remainder into the next target.
+ *
+ * Rounded on the way in. The variance multiplier and the defence reduction are
+ * both fractions, so without this a unit ends up on 73.99799986699969 hit
+ * points and that figure reaches the screen.
  */
 function focusFire(targets: readonly Unit[], amount: number): void {
-  let remaining = amount;
+  let remaining = Math.round(amount);
   for (const unit of [...targets].sort((a, b) => focusRank(a) - focusRank(b))) {
     if (remaining <= 0) break;
     const dealt = Math.min(remaining, unit.hp);
@@ -166,12 +170,12 @@ export function resolveSiege(
       null,
     );
 
-    const damage = swing(scorpionDamage(region, target !== null));
+    const damage = Math.round(swing(scorpionDamage(region, target !== null)));
     if (damage <= 0) return;
 
     if (target) {
       target.hp -= damage;
-      note(round, `Scorpions strike the dragon for ${Math.round(damage)}.`);
+      note(round, `Scorpions strike the dragon for ${damage}.`);
     } else {
       focusFire(attackers, damage);
       note(round, `Scorpions rake the attackers for ${Math.round(damage)}.`);

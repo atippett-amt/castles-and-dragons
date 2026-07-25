@@ -106,11 +106,36 @@ export function createApp(root: HTMLElement): void {
     selectRegion(id);
   }
 
+  /** Total hit points standing in a hold, whoever they belong to. */
+  function holdHealth(id: RegionId): number {
+    return unitsIn(state, id).reduce((sum, unit) => sum + unit.hp, 0);
+  }
+
+  /**
+   * Floats the health swing over both holds an order touched.
+   *
+   * Measured across the whole order rather than read out of the battle report,
+   * so a bloodless reinforcement reads the same way a siege does — the hold
+   * that gained shows a plus, the one that bled shows a minus.
+   */
+  function flashHealthChange(ids: readonly RegionId[], before: ReadonlyMap<RegionId, number>): void {
+    for (const id of ids) {
+      const was = before.get(id) ?? 0;
+      const now = holdHealth(id);
+      if (was !== now) board.flash(id, now - was, now);
+    }
+  }
+
   function march(to: RegionId): void {
     const ids = [...selectedUnits];
+    const from = selectedRegion;
+    const touched = from === null ? [to] : [from, to];
+    const before = new Map(touched.map((id) => [id, holdHealth(id)]));
+
     try {
       const result = moveUnits(state, graph, ids, to, humanPlayerId);
       if (result.battle) battleLog.show(result.battle);
+      flashHealthChange(touched, before);
 
       switch (result.outcome) {
         case 'captured':
@@ -151,9 +176,11 @@ export function createApp(root: HTMLElement): void {
   }
 
   function onRecruit(regionId: RegionId, type: RecruitableType): void {
+    const before = new Map([[regionId, holdHealth(regionId)]]);
     try {
       recruit(state, regionId, type, humanPlayerId);
       hud.say(`Raised a ${type} at ${holdName(regionId)}.`);
+      flashHealthChange([regionId], before);
       // Re-open the hold so the new unit appears and is picked up for orders.
       selectRegion(regionId);
     } catch (error) {

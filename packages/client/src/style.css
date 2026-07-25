@@ -447,6 +447,159 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Floating health change over a hold
+   -------------------------------------------------------------------------- */
+
+.float {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+  white-space: nowrap;
+  pointer-events: none;
+  /* Lifted clear of the banner it shares a position with. */
+  transform: translate(-50%, -220%);
+  animation: float-rise 2s ease-out forwards;
+}
+
+.float__delta {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 90%);
+}
+
+.float__remaining {
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  color: var(--parchment);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 90%);
+}
+
+.float--loss .float__delta {
+  color: #ff6b52;
+}
+
+.float--gain .float__delta {
+  color: #6fd98a;
+}
+
+@keyframes float-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -160%) scale(0.85);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -215%) scale(1.1);
+  }
+  30% {
+    transform: translate(-50%, -220%) scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Strength, roles and allegiance
+   -------------------------------------------------------------------------- */
+
+.strength {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.strength__box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.5rem;
+  background: rgb(0 0 0 / 25%);
+  border-left: 3px solid transparent;
+  border-radius: 2px;
+}
+
+.strength__box--attack {
+  border-left-color: #c9603f;
+}
+
+.strength__box--defense {
+  border-left-color: #4f86b8;
+}
+
+.strength__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+
+.strength__value {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--parchment);
+}
+
+.strength__detail {
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: var(--parchment-dim);
+}
+
+.roles {
+  margin: 0 0 0.9rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.roles__type {
+  margin-top: 0.3rem;
+  text-transform: capitalize;
+  color: var(--parchment);
+}
+
+.roles__type--dragon {
+  color: #e8563f;
+}
+
+.roles dd {
+  margin: 0;
+  color: var(--parchment-dim);
+}
+
+.allegiance {
+  margin: 0 0 0.4rem;
+  padding-left: 0.5rem;
+  font-size: 0.7rem;
+  border-left: 3px solid transparent;
+}
+
+.allegiance--mine {
+  border-left-color: #6fd98a;
+  color: var(--parchment);
+}
+
+.allegiance--theirs {
+  border-left-color: #c9603f;
+  color: var(--parchment-dim);
+}
+
+/* --------------------------------------------------------------------------
    Battle log
    -------------------------------------------------------------------------- */
 
