@@ -204,10 +204,37 @@ function buildPass(
     if (region.owner !== owner) continue;
 
     const threat = threatAgainst(state, graph, region.id, owner);
+    const garrison = stackAttack(
+      state,
+      unitsIn(state, region.id).filter((unit) => unit.owner === owner),
+    );
 
-    // Under threat, a frontier hold prefers works; a quiet one raises troops.
-    // The economy knob decides how strongly.
-    const preferDefense = threat > 0 && settings.economy < 0.7;
+    /**
+     * Fortify only when genuinely outmatched, not merely because someone is
+     * next door.
+     *
+     * This used to be `threat > 0`, which fired from turn one — every hold has
+     * a rival somewhere on its border — and kept firing until every defence
+     * was at its cap. Measured over the first thirty turns of a four-house
+     * game, the AI spent half its build actions on stonework, put up 28
+     * structures, raised no troops at all between turns 9 and 19, and launched
+     * exactly one attack. It turtled itself out of the game.
+     *
+     * Comparing threat against the garrison already present means a token
+     * force next door no longer triggers a building programme, while a real
+     * massing still does. The economy knob sets how much of an edge a rival
+     * needs before it is worth answering with walls.
+     */
+    const outmatched = threat > garrison * (1 + settings.economy);
+
+    // A dragon is not answered by counting attack points. It dies last, shrugs
+    // off infantry, and only a scorpion reliably kills one — so a hold with a
+    // dragon on its border always gets its first scorpion, whatever the raw
+    // numbers say. Further scorpions still have to justify themselves.
+    const needsAnswerToDragon =
+      region.defenses.scorpion === 0 && dragonNearby(state, graph, region.id, owner);
+
+    const preferDefense = outmatched || needsAnswerToDragon;
 
     const defense = preferDefense ? chooseDefense(state, graph, region.id, owner) : null;
     if (defense && fortifyBlockedReason(state, region.id, defense, owner) === null) {
