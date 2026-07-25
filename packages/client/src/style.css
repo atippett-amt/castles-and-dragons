@@ -110,6 +110,33 @@ body {
   background: #3a2e20;
 }
 
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.button--icon {
+  min-width: 1.6rem;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.button--icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom__level {
+  min-width: 2.7rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--parchment-dim);
+  cursor: pointer;
+}
+
 .button--primary {
   flex: none;
   color: var(--ink);
@@ -145,22 +172,37 @@ body {
    Stage + board
    -------------------------------------------------------------------------- */
 
+/* Scrolls once the board is zoomed past what fits. `margin: auto` on the board
+   keeps it centred while it still fits and lets it scroll once it does not,
+   which `place-items: center` cannot do — that clips the overflowing edge. */
 .stage {
   flex: 1;
   min-height: 0;
   position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  overflow: auto;
+  cursor: grab;
+  scrollbar-width: thin;
+}
+
+.stage--panning {
+  cursor: grabbing;
 }
 
 /* .board shrink-wraps the map image so that percentage offsets on the banners
    land exactly where holds.json says they should. */
 .board {
   position: relative;
+  margin: auto;
+  flex: none;
   line-height: 0;
   box-shadow: 0 0 60px rgb(0 0 0 / 80%);
 }
 
+/* Sized by viewport.ts, which is the only place that knows the fit height for a
+   given window and the ceiling past which the art would upscale. The
+   viewport-unit clamp is only a fallback for the instant before that runs; once
+   an explicit height is set it must not fight it. */
 .board__map {
   display: block;
   width: auto;
@@ -169,6 +211,11 @@ body {
   max-height: calc(100dvh - var(--hud-h));
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.board__map[style*='height'] {
+  max-width: none;
+  max-height: none;
 }
 
 .board__edges {

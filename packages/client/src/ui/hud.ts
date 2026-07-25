@@ -6,16 +6,22 @@ export interface Hud {
   refresh(): void;
   /** Shows the result of the last order, e.g. a capture or a blocked move. */
   say(message: string, tone?: 'info' | 'warn'): void;
+  /** Updates the zoom readout and greys the controls at their limits. */
+  setZoom(zoom: number, maxZoom: number): void;
 }
 
 export interface HudOptions {
   readonly state: GameState;
   readonly onEndTurn: () => void;
+  readonly onZoomIn: () => void;
+  readonly onZoomOut: () => void;
+  readonly onFit: () => void;
+  readonly onFullscreen: () => void;
 }
 
 /** Top bar: which realm, which turn, whose move, and the End Turn control. */
 export function createHud(options: HudOptions): Hud {
-  const { state, onEndTurn } = options;
+  const { state, onEndTurn, onZoomIn, onZoomOut, onFit, onFullscreen } = options;
 
   const element = document.createElement('header');
   element.className = 'hud';
@@ -42,7 +48,37 @@ export function createHud(options: HudOptions): Hud {
   endTurn.textContent = 'End Turn';
   endTurn.addEventListener('click', onEndTurn);
 
-  element.append(realm, turn, team, treasury, message, createLegend(), endTurn);
+  const iconButton = (label: string, title: string, onClick: () => void): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button--icon';
+    button.textContent = label;
+    button.title = title;
+    button.addEventListener('click', onClick);
+    return button;
+  };
+
+  const zoomOut = iconButton('−', 'Zoom out', onZoomOut);
+  const zoomIn = iconButton('+', 'Zoom in', onZoomIn);
+  const zoomLevel = document.createElement('span');
+  zoomLevel.className = 'zoom__level';
+  zoomLevel.title = 'Click to fit the whole map';
+  zoomLevel.addEventListener('click', onFit);
+
+  const zoom = document.createElement('span');
+  zoom.className = 'zoom';
+  zoom.append(zoomOut, zoomLevel, zoomIn, iconButton('⤢', 'Fullscreen', onFullscreen));
+
+  element.append(realm, turn, team, treasury, message, createLegend(), zoom, endTurn);
+
+  function setZoom(current: number, max: number): void {
+    zoomLevel.textContent = `${Math.round(current * 100)}%`;
+    zoomOut.disabled = current <= 1.001;
+    // At the ceiling one source pixel maps to one device pixel; going further
+    // would upscale, so the control simply stops.
+    zoomIn.disabled = current >= max - 0.001;
+    zoomIn.title = zoomIn.disabled ? 'Already at the limit of the map’s detail' : 'Zoom in';
+  }
 
   function refresh(): void {
     turn.textContent = `Turn ${state.turn} / ${state.turnLimit}`;
@@ -72,7 +108,8 @@ export function createHud(options: HudOptions): Hud {
   }
 
   refresh();
-  return { element, refresh, say };
+  setZoom(1, 1);
+  return { element, refresh, say, setZoom };
 }
 
 function createLegend(): HTMLElement {

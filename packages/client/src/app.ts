@@ -19,6 +19,7 @@ import {
   type UnitId,
 } from '@shared/index';
 import { createBoard } from './render/board';
+import { createViewport } from './render/viewport';
 import { createDefaultGame } from './setup/defaultGame';
 import { createBattleLog } from './ui/battleLog';
 import { createTurnReport } from './ui/turnReport';
@@ -61,7 +62,14 @@ export function createApp(root: HTMLElement): void {
 
   const holdName = (id: RegionId): string => graph.regions.get(id)?.name ?? id;
 
-  const hud = createHud({ state, onEndTurn });
+  const hud = createHud({
+    state,
+    onEndTurn,
+    onZoomIn: () => viewport.zoomBy(1.25),
+    onZoomOut: () => viewport.zoomBy(1 / 1.25),
+    onFit: () => viewport.fit(),
+    onFullscreen: () => viewport.toggleFullscreen(),
+  });
   const panel = createHoldPanel({
     graph,
     state,
@@ -294,6 +302,10 @@ export function createApp(root: HTMLElement): void {
   stage.className = 'stage';
   stage.append(board.element, panel.element, battleLog.element, turnReport.element);
 
+  // Created after the stage exists, since it sizes the board against it.
+  const viewport = createViewport(stage, board.image);
+  viewport.onChange(() => hud.setZoom(viewport.zoom, viewport.maxZoom));
+
   // Clicking bare map, outside any banner, clears the selection.
   stage.addEventListener('click', (event) => {
     if (event.target === stage || event.target === board.element) selectRegion(null);
@@ -306,6 +318,8 @@ export function createApp(root: HTMLElement): void {
   }
 
   root.append(hud.element, stage);
+  // Only now does the stage have a measurable size to fit the board against.
+  viewport.refit();
   announceTurn(state.turn, 0);
   render();
 }
