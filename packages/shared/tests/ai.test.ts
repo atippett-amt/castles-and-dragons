@@ -269,6 +269,36 @@ describe('threat assessment', () => {
     expect(actions.some((action) => action.kind === 'fortify')).toBe(true);
   });
 
+  it('does not start a building programme over a token force next door', () => {
+    // A single swordsman is not a siege. Fortifying on any threat at all had
+    // the AI put up 28 structures and raise no troops for ten turns.
+    rich(state);
+    spawnUnit(state, 'swordsman', 'foe', 'sheffield');
+
+    const actions = takeAiTurn(state, graph, 'ai');
+    expect(actions.some((action) => action.kind === 'fortify')).toBe(false);
+    expect(actions.some((action) => action.kind === 'recruit')).toBe(true);
+  });
+
+  it('answers a dragon with a scorpion however the numbers look', () => {
+    // A hatchling is worth 15 attack against a 22-attack garrison, so it never
+    // counts as outmatching — but infantry cannot deal with it either.
+    rich(state);
+    spawnUnit(state, 'dragon', 'foe', 'muscle_shoals');
+
+    takeAiTurn(state, graph, 'ai');
+    expect(getRegion(state, 'florence').defenses.scorpion).toBe(1);
+  });
+
+  it('does not keep stacking scorpions once it has an answer', () => {
+    rich(state);
+    spawnUnit(state, 'dragon', 'foe', 'muscle_shoals');
+    getRegion(state, 'florence').defenses.scorpion = 1;
+
+    const actions = takeAiTurn(state, graph, 'ai');
+    expect(actions.some((action) => action.kind === 'fortify')).toBe(false);
+  });
+
   it('marches out when only neutrals are nearby, rather than holding back half', () => {
     clearNeutralGarrisons(state);
     const before = unitsIn(state, 'florence').filter((u) => u.owner === 'ai').length;
