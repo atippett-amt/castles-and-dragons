@@ -22,6 +22,7 @@ import { createBoard } from './render/board';
 import { createViewport } from './render/viewport';
 import { createDefaultGame } from './setup/defaultGame';
 import { createBattleLog } from './ui/battleLog';
+import { createGameOverScreen } from './ui/gameOver';
 import { createTurnReport } from './ui/turnReport';
 import { createHoldPanel } from './ui/holdPanel';
 import { createHud } from './ui/hud';
@@ -39,6 +40,9 @@ import { createHud } from './ui/hud';
  * so one player drives every side.
  */
 export function createApp(root: HTMLElement): void {
+  // Restarting re-runs this function, so clear whatever the last game left.
+  root.replaceChildren();
+
   const { map, graph, state, humanPlayerId } = createDefaultGame();
 
   let selectedRegion: RegionId | null = null;
@@ -83,6 +87,11 @@ export function createApp(root: HTMLElement): void {
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
   const battleLog = createBattleLog(graph);
   const turnReport = createTurnReport(state, graph);
+  const gameOver = createGameOverScreen({
+    state,
+    humanPlayerId,
+    onRestart: () => createApp(root),
+  });
 
   /** Holds the current selection could march into this turn. */
   function targets(): ReadonlySet<RegionId> {
@@ -242,7 +251,7 @@ export function createApp(root: HTMLElement): void {
     const aiActions: AiAction[] = [];
 
     let guard = 0;
-    while (teamIsAllAI(state, activeTeam(state).id) && guard++ < 64) {
+    while (state.outcome === null && teamIsAllAI(state, activeTeam(state).id) && guard++ < 64) {
       aiActions.push(...takeAiTeamTurn(state, graph, activeTeam(state).id));
       change = endTurn(state, graph);
       hatched += change.hatchings.length;
@@ -250,6 +259,14 @@ export function createApp(root: HTMLElement): void {
 
     turnReport.show(aiActions, change.turn);
     replayAiAttacks(aiActions);
+
+    if (state.outcome !== null) {
+      // Let the last assault land before the result covers the board.
+      window.setTimeout(() => gameOver.show(state.outcome!), 1200);
+      hud.say(`The war is over on turn ${state.outcome.turn}.`);
+      render();
+      return;
+    }
 
     if (hatched > 0) {
       // The one turn in the game that changes everything at once.
@@ -289,10 +306,13 @@ export function createApp(root: HTMLElement): void {
     });
   }
 
-  function announceTurn(turn: number, income: number): void {
+  /** `income` is null at the opening, where no turn has been ended to collect. */
+  function announceTurn(turn: number, income: number | null): void {
     if (isAiTurn()) {
       // Only reachable if every team is AI — nothing for a human to do.
       hud.say(`${activeTeam(state).name} (AI) holds the turn. Turn ${turn}.`, 'warn');
+    } else if (income === null) {
+      hud.say(`Your move — turn ${turn}.`);
     } else {
       hud.say(`Your move — turn ${turn}. Collected ${income} gold.`);
     }
@@ -317,9 +337,11 @@ export function createApp(root: HTMLElement): void {
     (globalThis as unknown as Record<string, unknown>)['__game'] = { state, graph, map };
   }
 
-  root.append(hud.element, stage);
+  // Outside the stage: the stage scrolls when zoomed, and a result screen must
+  // not scroll away with the map.
+  root.append(hud.element, stage, gameOver.element);
   // Only now does the stage have a measurable size to fit the board against.
   viewport.refit();
-  announceTurn(state.turn, 0);
+  announceTurn(state.turn, null);
   render();
 }

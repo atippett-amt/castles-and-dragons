@@ -98,6 +98,8 @@ export function moveUnits(
 ): MoveResult {
   if (unitIds.length === 0) throw new IllegalMoveError('no units selected');
 
+  if (state.outcome !== null) throw new IllegalMoveError('the game is over');
+
   if (!isActiveTeamMember(state, actingPlayer)) {
     throw new IllegalMoveError('it is not your team’s turn');
   }

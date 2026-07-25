@@ -68,13 +68,40 @@ describe('legality', () => {
 
     let guard = 0;
     expect(() => {
-      while (both.turn <= BALANCE.game.turnLimit && guard++ < 5000) {
+      while (both.outcome === null && both.turn <= BALANCE.game.turnLimit && guard++ < 5000) {
         takeAiTeamTurn(both, graph, activeTeam(both).id);
         endTurn(both, graph);
       }
     }).not.toThrow();
 
-    expect(both.turn).toBeGreaterThan(BALANCE.game.turnLimit);
+    // Either somebody won outright or the clock ran out — both are conclusions,
+    // and reaching one without an illegal order is the point of the test.
+    const concluded = both.outcome !== null || both.turn > BALANCE.game.turnLimit;
+    expect(concluded).toBe(true);
+    expect(guard).toBeLessThan(5000);
+  });
+
+  it('plays a game that actually reaches a conclusion', () => {
+    const both = createInitialState({
+      map,
+      players: [
+        { id: 'a', name: 'A', teamId: 'ta', isAI: true, difficulty: 'hard', startRegion: 'florence' },
+        { id: 'b', name: 'B', teamId: 'tb', isAI: true, startRegion: 'whiteoak' },
+      ],
+      teams: [
+        { id: 'ta', name: 'A' },
+        { id: 'tb', name: 'B' },
+      ],
+    });
+
+    let guard = 0;
+    while (both.outcome === null && guard++ < 5000) {
+      takeAiTeamTurn(both, graph, activeTeam(both).id);
+      endTurn(both, graph);
+    }
+
+    expect(both.outcome).not.toBeNull();
+    expect(['conquest', 'holds', 'strength', 'draw']).toContain(both.outcome?.kind);
   });
 
   it('leaves the game in a coherent state after a full playthrough', () => {
@@ -91,7 +118,7 @@ describe('legality', () => {
     });
 
     let guard = 0;
-    while (both.turn <= 60 && guard++ < 3000) {
+    while (both.outcome === null && both.turn <= 60 && guard++ < 3000) {
       takeAiTeamTurn(both, graph, activeTeam(both).id);
       endTurn(both, graph);
     }
