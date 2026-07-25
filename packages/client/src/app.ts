@@ -20,7 +20,8 @@ import {
 } from '@shared/index';
 import { createBoard } from './render/board';
 import { createViewport } from './render/viewport';
-import { createDefaultGame } from './setup/defaultGame';
+import type { Game } from './setup/game';
+import { saveGame } from './setup/storage';
 import { createBattleLog } from './ui/battleLog';
 import { createGameOverScreen } from './ui/gameOver';
 import { createTurnReport } from './ui/turnReport';
@@ -39,11 +40,16 @@ import { createHud } from './ui/hud';
  * Until Phase 6 adds AI, ending a turn simply hands control to the next team,
  * so one player drives every side.
  */
-export function createApp(root: HTMLElement): void {
+export interface AppOptions {
+  /** Hands control back to the setup screen, leaving the save intact. */
+  readonly onNewGame: () => void;
+}
+
+export function createApp(root: HTMLElement, game: Game, options: AppOptions): void {
   // Restarting re-runs this function, so clear whatever the last game left.
   root.replaceChildren();
 
-  const { map, graph, state, humanPlayerId } = createDefaultGame();
+  const { map, graph, state, humanPlayerId } = game;
 
   let selectedRegion: RegionId | null = null;
   let selectedUnits = new Set<UnitId>();
@@ -73,6 +79,7 @@ export function createApp(root: HTMLElement): void {
     onZoomOut: () => viewport.zoomBy(1 / 1.25),
     onFit: () => viewport.fit(),
     onFullscreen: () => viewport.toggleFullscreen(),
+    onNewGame: options.onNewGame,
   });
   const panel = createHoldPanel({
     graph,
@@ -90,7 +97,9 @@ export function createApp(root: HTMLElement): void {
   const gameOver = createGameOverScreen({
     state,
     humanPlayerId,
-    onRestart: () => createApp(root),
+    // Back to the setup screen rather than straight into a repeat of the same
+    // matchup — a player who just lost may well want different opponents.
+    onRestart: options.onNewGame,
   });
 
   /** Holds the current selection could march into this turn. */
@@ -105,6 +114,10 @@ export function createApp(root: HTMLElement): void {
     board.highlight(targets());
     hud.refresh();
     panel.show(selectedRegion, selectedUnits);
+    // Saved on every repaint rather than at chosen moments: render already runs
+    // after everything that changes the game, so there is no path that mutates
+    // state and forgets to persist it.
+    saveGame(state, humanPlayerId);
   }
 
   /**
