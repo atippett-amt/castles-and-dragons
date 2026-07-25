@@ -283,17 +283,18 @@ describe('scorpions', () => {
 
 describe('defence reduction', () => {
   it('turns an even fight into a defensive win', () => {
-    // Measured as hold rate, not battle length: a fortified garrison wins
-    // FASTER, because it survives to finish the attackers off. Counting rounds
-    // would have suggested ramparts hurt. Averaged over seeds, since a single
-    // battle swings on the ±10% variance.
+    // Measured at parity, where the reduction actually decides things: give the
+    // attacker a numerical edge and it wins through any amount of stonework.
+    // Hold rate, not battle length — a fortified garrison wins FASTER because
+    // it survives to finish the attackers off, so counting rounds would have
+    // suggested ramparts were harmful.
     const holdRate = (defenses: Partial<Record<DefenseType, number>>, at: RegionId): number => {
       let held = 0;
-      for (let seed = 1; seed <= 25; seed++) {
+      for (let seed = 1; seed <= 40; seed++) {
         const report = fight(
           siege({
-            attackers: Array(4).fill('swordsman'),
-            defenders: Array(3).fill('swordsman'),
+            attackers: ['swordsman', 'archer', 'archer'],
+            defenders: ['swordsman', 'archer', 'archer'],
             defenses,
             at,
             seed,
@@ -302,13 +303,50 @@ describe('defence reduction', () => {
         );
         if (report.outcome === 'repelled') held += 1;
       }
-      return held / 25;
+      return held / 40;
     };
 
     const bare = holdRate({}, FIELD);
     const fortified = holdRate({ ramparts: BALANCE.ramparts.cap }, MOUNTAIN);
 
     expect(fortified).toBeGreaterThan(bare);
+    // A fortress should be near enough impregnable to an equal force.
+    expect(fortified).toBeGreaterThan(0.9);
+  });
+
+  it('lets a mutual massacre take the hold, rather than handing ties to the defender', () => {
+    // Evenly matched stacks wipe each other out often enough that awarding
+    // every tie to the defender made attacking at parity near hopeless.
+    let capturedWithNoSurvivors = 0;
+    for (let seed = 1; seed <= 60; seed++) {
+      const scenario = siege({
+        attackers: ['swordsman', 'archer', 'archer'],
+        defenders: ['swordsman', 'archer', 'archer'],
+        seed,
+      });
+      const report = fight(scenario);
+      if (report.outcome === 'captured' && report.survivingAttackerIds.length === 0) {
+        capturedWithNoSurvivors += 1;
+        expect(getRegion(scenario.state, FIELD).owner).toBe('atk');
+      }
+    }
+    expect(capturedWithNoSurvivors).toBeGreaterThan(0);
+  });
+
+  it('still leaves a hold standing if a defending dragon outlives everyone', () => {
+    // Nobody left to claim it, so the dragon holds the field.
+    const scenario = siege({
+      attackers: ['archer'],
+      defenders: ['archer', 'dragon'],
+      at: MOUNTAIN,
+      seed: 3,
+    });
+    const report = fight(scenario, MOUNTAIN);
+
+    if (report.survivingAttackerIds.length === 0) {
+      expect(report.outcome).toBe('repelled');
+      expect(getRegion(scenario.state, MOUNTAIN).owner).toBe('def');
+    }
   });
 });
 

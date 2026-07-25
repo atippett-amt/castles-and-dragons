@@ -108,6 +108,12 @@ describe('banners', () => {
 });
 
 describe('readouts', () => {
+  /** What the readout should say for a hold of the given terrain rating. */
+  const expectedDef = (terrain: number): string => {
+    const rating = terrain + BALANCE.start.ramparts * BALANCE.ramparts.defensePoints;
+    return `-${Math.round(rating * BALANCE.defense.reductionPerPoint * 100)}% dmg`;
+  };
+
   it('reports composition, health, attack and the terrain advantage', () => {
     const readout = readoutOf(board, 'florence');
 
@@ -115,12 +121,13 @@ describe('readouts', () => {
     expect(text(readout, '.readout__army')).toBe('1S 2A');
     expect(text(readout, '.readout__hp')).toBe('60/60 hp');
     expect(text(readout, '.readout__atk')).toBe('22 atk');
-    expect(text(readout, '.readout__def')).toBe('-18% dmg');
+    expect(text(readout, '.readout__def')).toBe(expectedDef(1));
   });
 
   it('shows a mountain hold shrugging off more than a forest one', () => {
     // Underwood-Petersville is mountains: defence 3 plus the same rampart.
-    expect(text(readoutOf(board, 'underwood_petersville'), '.readout__def')).toBe('-30% dmg');
+    expect(text(readoutOf(board, 'underwood_petersville'), '.readout__def')).toBe(expectedDef(3));
+    expect(expectedDef(3)).not.toBe(expectedDef(1));
   });
 
   it('says nothing at all about an empty hold', () => {
