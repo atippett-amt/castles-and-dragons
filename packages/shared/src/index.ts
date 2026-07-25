@@ -21,4 +21,5 @@ export * from './combat';
 export * from './orders';
 export * from './holds';
 export * from './turn';
+export * from './ai';
 export * from './state';
