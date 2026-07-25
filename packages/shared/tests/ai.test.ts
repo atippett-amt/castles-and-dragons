@@ -185,12 +185,16 @@ describe('building', () => {
     // Florence guards two of the three bridges; put a force across one.
     for (let i = 0; i < 4; i++) spawnUnit(state, 'swordsman', 'foe', 'sheffield');
     const troopsBefore = unitsIn(state, 'florence').length;
+    const worksBefore = (): number => {
+      const d = getRegion(state, 'florence').defenses;
+      return d.ramparts + d.watchtower + d.scorpion;
+    };
+    const before = worksBefore();
 
     takeAiTurn(state, graph, 'ai');
 
-    const defenses = getRegion(state, 'florence').defenses;
-    const built = defenses.ramparts + defenses.watchtower + defenses.scorpion;
-    expect(built).toBe(1);
+    // Holds start with a wall, so it is the increment that matters.
+    expect(worksBefore()).toBe(before + 1);
     // The build action went on the wall, not on a recruit.
     expect(unitsIn(state, 'florence').filter((u) => u.owner === 'ai').length).toBeLessThanOrEqual(
       troopsBefore,

@@ -37,20 +37,27 @@ export const BALANCE = {
   },
 
   // ---------------------------------------------------------------------------
-  // STARTING FORCES — the garrison a player begins with in their home hold.
-  // Deliberately mirrors `neutral` below, so an early grab at a neutral hold is
-  // a real fight rather than a free gift.
+  // STARTING FORCES — what every hold on the map begins with, player-held or
+  // not. Deliberately mirrors `neutral` below, so an early grab at a neutral
+  // hold is a real fight rather than a free gift.
+  //
+  // An archer-heavy opening garrison behind a rampart means the first strike
+  // matters from turn one, and that every hold starts genuinely defensible.
   // ---------------------------------------------------------------------------
   start: {
-    swordsmen: 2,
-    archers: 1,
+    swordsmen: 1,
+    archers: 2,
+    ramparts: 1,
   },
 
   // Costs in Gold. With holds yielding 2–3/turn, a unit is ~1 turn's income,
   // a defense ~2 turns — so fortifying is a real tempo cost.
+  //
+  // Archers are the cheap unit and swordsmen the premium one: volume of
+  // first-strike fire is easy to buy, staying power is what you pay for.
   cost: {
-    swordsman: 3,
-    archer: 4,
+    swordsman: 5,
+    archer: 3,
     ramparts: 5,
     watchtower: 5,
     scorpion: 6,       // premium: the anti-dragon tool
@@ -145,8 +152,9 @@ export const BALANCE = {
   // NEUTRAL HOLDS — the garrison guarding an unowned hold (before you conquer it).
   // ---------------------------------------------------------------------------
   neutral: {
-    swordsmen: 2,              // starting garrison per neutral hold
-    archers: 1,
+    swordsmen: 1,              // starting garrison per neutral hold
+    archers: 2,
+    ramparts: 1,               // unclaimed holds are walled too
     // (its dragon hatches on turn 5 like any region's, and defends in place)
   },
 } as const;

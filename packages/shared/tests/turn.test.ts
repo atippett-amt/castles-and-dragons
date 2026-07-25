@@ -92,10 +92,10 @@ describe('movement refresh', () => {
     moveUnits(state, graph, [unit.id], 'underwood_petersville', 'p0');
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state, graph); // t1's turn â€” t0 stays spent
+    endTurn(state, graph); // t1's turn — t0 stays spent
     expect(getUnit(state, unit.id).movesLeft).toBe(0);
 
-    endTurn(state, graph); // back to t0 â€” refreshed
+    endTurn(state, graph); // back to t0 — refreshed
     expect(getUnit(state, unit.id).movesLeft).toBe(1);
   });
 
