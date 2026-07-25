@@ -85,5 +85,5 @@ Letting the deploy command fetch it via `npx` keeps those binaries out of
 - [x] **Phase 4** — siege battle, capture, claim-on-capture, neutral garrisons
 - [x] **Phase 5** — dragons hatch on turn 5 and grow to turn 100
 - [x] **Phase 6** — AI opponents that build, expand, mass and attack
-- [ ] Phase 7 — victory, elimination, turn-100 resolution
+- [x] **Phase 7** — elimination, victory by conquest, turn-100 tiebreak, result screen
 - [ ] Phase 8 — setup screen, save/resume → ships Stage A

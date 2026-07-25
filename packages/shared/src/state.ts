@@ -199,6 +199,7 @@ export function createInitialState(options: CreateStateOptions): GameState {
     ),
     teams: teams.map((team): Team => ({ id: team.id, name: team.name })),
     activeTeamIndex: 0,
+    outcome: null,
     rng: createRng(seed),
   };
 

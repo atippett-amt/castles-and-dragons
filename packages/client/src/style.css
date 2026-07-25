@@ -919,6 +919,97 @@ body {
   color: var(--parchment);
 }
 
+/* --------------------------------------------------------------------------
+   Result screen
+   -------------------------------------------------------------------------- */
+
+.gameover {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgb(10 8 5 / 78%);
+  backdrop-filter: blur(3px);
+}
+
+.gameover[hidden] {
+  display: none;
+}
+
+.gameover__card {
+  width: min(26rem, calc(100% - 2rem));
+  padding: 1.6rem 1.8rem 1.4rem;
+  text-align: center;
+  background: rgb(23 18 12 / 98%);
+  border: 1px solid #4a3c28;
+  border-top: 5px solid #8a7c62;
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 80%);
+}
+
+.gameover--won .gameover__card {
+  border-top-color: var(--gold);
+}
+
+.gameover--lost .gameover__card {
+  border-top-color: #8a3a2f;
+}
+
+.gameover__title {
+  margin: 0 0 0.3rem;
+  font-size: 1.7rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.gameover--lost .gameover__title {
+  color: #d4796a;
+}
+
+.gameover__reason {
+  margin: 0 0 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--parchment-dim);
+}
+
+.gameover__table {
+  width: 100%;
+  margin-bottom: 1.2rem;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.gameover__table th {
+  padding-bottom: 0.3rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+
+.gameover__table th:not(:first-child),
+.gameover__table td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gameover__table td {
+  padding: 0.2rem 0;
+}
+
+.gameover__table td:first-child {
+  padding-left: 0.5rem;
+  text-align: left;
+  border-left: 3px solid var(--owner, transparent);
+}
+
+.gameover__winner {
+  color: var(--gold);
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
   .legend {
     display: none;

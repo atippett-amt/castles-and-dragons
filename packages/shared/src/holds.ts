@@ -92,6 +92,8 @@ function buildGateReason(
   cost: number,
   actingPlayer: PlayerId,
 ): string | null {
+  if (state.outcome !== null) return 'the game is over';
+
   const region = getRegion(state, regionId);
 
   if (region.owner === NEUTRAL) return 'a neutral hold cannot build';

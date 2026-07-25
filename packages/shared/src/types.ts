@@ -135,6 +135,22 @@ export interface Team {
   readonly name: string;
 }
 
+/**
+ * How a finished game finished.
+ *
+ * Structured rather than worded: the client decides how a result reads.
+ *   conquest — everyone else lost their last hold
+ *   holds    — turn limit reached, decided on holds controlled
+ *   strength — turn limit reached, level on holds, decided on army strength
+ *   draw     — turn limit reached and level on both
+ */
+export interface Outcome {
+  readonly kind: 'conquest' | 'holds' | 'strength' | 'draw';
+  /** Null only for a draw. */
+  readonly winningTeamId: TeamId | null;
+  readonly turn: number;
+}
+
 /** Seeded PRNG state. Lives in GameState so battles replay identically. */
 export interface RngState {
   s: number;
@@ -153,5 +169,7 @@ export interface GameState {
   readonly teams: readonly Team[];
   /** Index into `teams` — whose turn it is. Team-sequential play. */
   activeTeamIndex: number;
+  /** Set once the game is decided. Non-null means no further orders. */
+  outcome: Outcome | null;
   readonly rng: RngState;
 }

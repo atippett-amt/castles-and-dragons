@@ -13,7 +13,8 @@ import type { Graph } from './graph';
 import { collectIncome, resetBuilds } from './holds';
 import { activeTeam } from './players';
 import { refreshMovement } from './units';
-import type { GameState, TeamId } from './types';
+import { checkVictory, eliminateLandlessPlayers } from './victory';
+import type { GameState, Outcome, PlayerId, TeamId } from './types';
 
 export interface TurnChange {
   readonly turn: number;
@@ -24,6 +25,10 @@ export interface TurnChange {
   readonly incomeCollected: number;
   /** Eggs that hatched as this turn opened — only ever on turn 5. */
   readonly hatchings: readonly Hatching[];
+  /** Players who lost their last hold and were knocked out this turn. */
+  readonly eliminated: readonly PlayerId[];
+  /** Set on the turn the game is decided, and null every turn before it. */
+  readonly outcome: Outcome | null;
 }
 
 /**
@@ -49,6 +54,8 @@ export function currentTurn(state: GameState): TurnChange {
     roundCompleted: false,
     incomeCollected: 0,
     hatchings: [],
+    eliminated: [],
+    outcome: state.outcome,
   };
 }
 
@@ -60,6 +67,10 @@ export function currentTurn(state: GameState): TurnChange {
  * to refuse to advance.
  */
 export function endTurn(state: GameState, graph: Graph): TurnChange {
+  // A decided game takes no further turns. Without this the counter would keep
+  // climbing behind the result screen.
+  if (state.outcome !== null) return currentTurn(state);
+
   const wasLastTeam = state.activeTeamIndex === state.teams.length - 1;
   let hatchings: readonly Hatching[] = [];
 
@@ -75,6 +86,23 @@ export function endTurn(state: GameState, graph: Graph): TurnChange {
     hatchings = hatchEggs(state);
   }
 
+  // Settle who is still in the game before the next team acts, so a knocked-out
+  // player is never handed a turn.
+  const eliminated = eliminateLandlessPlayers(state);
+  const outcome = checkVictory(state);
+  if (outcome !== null) {
+    state.outcome = outcome;
+    return {
+      turn: state.turn,
+      activeTeamId: activeTeam(state).id,
+      roundCompleted: wasLastTeam,
+      incomeCollected: 0,
+      hatchings,
+      eliminated,
+      outcome,
+    };
+  }
+
   const next = activeTeam(state);
   const incomeCollected = beginTeamTurn(state, graph, next.id);
 
@@ -84,6 +112,8 @@ export function endTurn(state: GameState, graph: Graph): TurnChange {
     roundCompleted: wasLastTeam,
     incomeCollected,
     hatchings,
+    eliminated,
+    outcome: null,
   };
 }
 
