@@ -1,5 +1,21 @@
-import { unitsIn, type GameState, type Graph, type MapData, type RegionDef, type RegionId } from '@shared/index';
+import {
+  damageReduction,
+  defenseRating,
+  unitProfile,
+  unitsIn,
+  type GameState,
+  type Graph,
+  type MapData,
+  type RegionDef,
+  type RegionId,
+  type RegionState,
+  type Unit,
+  type UnitType,
+} from '@shared/index';
 import { EDGE_STYLE, colorForOwner } from './colors';
+
+/** How long a floating health change stays on screen, in milliseconds. */
+const FLOAT_LIFETIME_MS = 4200;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -49,9 +65,14 @@ export function createBoard(options: BoardOptions): Board {
   element.append(createEdgeLayer(map, graph));
 
   const banners = new Map<RegionId, HTMLButtonElement>();
+  const readouts = new Map<RegionId, HTMLElement>();
   let selected: RegionId | null = null;
 
   for (const region of map.regions) {
+    const readout = createReadout(region);
+    readouts.set(region.id, readout);
+    element.append(readout);
+
     const banner = createBanner(region);
     banner.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -100,8 +121,9 @@ export function createBoard(options: BoardOptions): Board {
       element.append(float);
 
       // Removed on a timer rather than animationend, so it still cleans itself
-      // up for players who have animations turned off.
-      setTimeout(() => float.remove(), 2000);
+      // up for players who have animations turned off. Kept in step with the
+      // CSS duration via FLOAT_LIFETIME_MS.
+      setTimeout(() => float.remove(), FLOAT_LIFETIME_MS);
     },
     refresh() {
       for (const region of map.regions) {
@@ -126,12 +148,99 @@ export function createBoard(options: BoardOptions): Board {
         // so it gets its own mark rather than hiding inside the garrison count.
         const dragon = banner.querySelector<HTMLElement>('.banner__dragon');
         if (dragon) dragon.hidden = !garrison.some((unit) => unit.type === 'dragon');
+
+        updateReadout(readouts.get(region.id), region, regionState, garrison, state.turn);
       }
     },
   };
 
   board.refresh();
   return board;
+}
+
+/**
+ * The always-on readout that sits above a hold's banner.
+ *
+ * Shares the banner's normalized position and is lifted clear of it in CSS.
+ * Purely informational, so it never swallows a click meant for the banner.
+ */
+function createReadout(region: RegionDef): HTMLElement {
+  const readout = document.createElement('div');
+  readout.className = 'readout';
+  readout.style.left = `${region.labelPos.x * 100}%`;
+  readout.style.top = `${region.labelPos.y * 100}%`;
+  readout.dataset['region'] = region.id;
+  readout.hidden = true;
+
+  for (const [row, fields] of [
+    ['readout__row', ['army', 'hp']],
+    ['readout__row', ['atk', 'def']],
+  ] as const) {
+    const line = document.createElement('div');
+    line.className = row;
+    for (const field of fields) {
+      const span = document.createElement('span');
+      span.className = `readout__${field}`;
+      line.append(span);
+    }
+    readout.append(line);
+  }
+
+  return readout;
+}
+
+/** Short composition, e.g. "2S 1A 1D". Zero counts are left out. */
+function composition(garrison: readonly Unit[]): string {
+  const counts: Record<UnitType, number> = { swordsman: 0, archer: 0, dragon: 0 };
+  for (const unit of garrison) counts[unit.type] += 1;
+
+  const initials: readonly (readonly [UnitType, string])[] = [
+    ['swordsman', 'S'],
+    ['archer', 'A'],
+    ['dragon', 'D'],
+  ];
+
+  return initials
+    .filter(([type]) => counts[type] > 0)
+    .map(([type, letter]) => `${counts[type]}${letter}`)
+    .join(' ');
+}
+
+function updateReadout(
+  readout: HTMLElement | undefined,
+  region: RegionDef,
+  regionState: RegionState,
+  garrison: readonly Unit[],
+  turn: number,
+): void {
+  if (!readout) return;
+
+  // An empty hold has nothing to report, and ten permanent labels over an empty
+  // map would bury the art.
+  readout.hidden = garrison.length === 0;
+  if (garrison.length === 0) return;
+
+  let health = 0;
+  let maxHealth = 0;
+  let attack = 0;
+  for (const unit of garrison) {
+    const profile = unitProfile(unit.type, turn);
+    health += unit.hp;
+    maxHealth += profile.hp;
+    attack += profile.atk;
+  }
+
+  const reduction = damageReduction(defenseRating(regionState, region.defenseBonus));
+
+  const set = (selector: string, text: string): void => {
+    const node = readout.querySelector<HTMLElement>(selector);
+    if (node) node.textContent = text;
+  };
+
+  set('.readout__army', composition(garrison));
+  set('.readout__hp', `${health}/${maxHealth} hp`);
+  set('.readout__atk', `${attack} atk`);
+  set('.readout__def', `-${Math.round(reduction * 100)}% dmg`);
 }
 
 function createBanner(region: RegionDef): HTMLButtonElement {

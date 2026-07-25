@@ -447,6 +447,56 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Permanent stat readout above a hold
+   -------------------------------------------------------------------------- */
+
+.readout {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.52rem;
+  line-height: 1.3;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  color: var(--parchment);
+  background: rgb(14 11 7 / 72%);
+  border-radius: 2px;
+  /* Sits directly above the banner it shares a position with. */
+  transform: translate(-50%, -145%);
+  pointer-events: none;
+}
+
+.readout[hidden] {
+  display: none;
+}
+
+.readout__row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.readout__army {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.readout__hp {
+  color: #8fd6a2;
+}
+
+.readout__atk {
+  color: #e69a7a;
+}
+
+.readout__def {
+  color: #8fb8d6;
+}
+
+/* --------------------------------------------------------------------------
    Floating health change over a hold
    -------------------------------------------------------------------------- */
 
@@ -459,9 +509,10 @@ body {
   line-height: 1.15;
   white-space: nowrap;
   pointer-events: none;
-  /* Lifted clear of the banner it shares a position with. */
-  transform: translate(-50%, -220%);
-  animation: float-rise 2s ease-out forwards;
+  /* Lifted clear of both the banner and the readout above it. */
+  transform: translate(-50%, -330%);
+  /* Kept in step with FLOAT_LIFETIME_MS in board.ts. */
+  animation: float-rise 4.2s ease-out forwards;
 }
 
 .float__delta {
@@ -485,24 +536,28 @@ body {
   color: #6fd98a;
 }
 
+/* Rises fast, then holds still and readable for most of its life before
+   drifting away — the numbers matter more than the motion. */
 @keyframes float-rise {
   0% {
     opacity: 0;
-    transform: translate(-50%, -160%) scale(0.85);
+    transform: translate(-50%, -250%) scale(0.85);
   }
-  15% {
+  7% {
     opacity: 1;
-    transform: translate(-50%, -215%) scale(1.1);
+    transform: translate(-50%, -325%) scale(1.12);
   }
-  30% {
-    transform: translate(-50%, -220%) scale(1);
-  }
-  75% {
+  14% {
     opacity: 1;
+    transform: translate(-50%, -330%) scale(1);
+  }
+  82% {
+    opacity: 1;
+    transform: translate(-50%, -330%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -300%);
+    transform: translate(-50%, -400%) scale(1);
   }
 }
 
