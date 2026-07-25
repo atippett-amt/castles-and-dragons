@@ -41,13 +41,17 @@ export const BALANCE = {
   // not. Deliberately mirrors `neutral` below, so an early grab at a neutral
   // hold is a real fight rather than a free gift.
   //
-  // An archer-heavy opening garrison behind a rampart means the first strike
-  // matters from turn one, and that every hold starts genuinely defensible.
+  // Holds start UNWALLED. A free rampart was measured and dropped: it halved
+  // the attacker's odds at parity (42% -> 21% on forest, 21% -> 0% on
+  // mountains) and cut captures per game by a third. It also ate half the
+  // rampart cap of 2, so building one could only ever double existing walls
+  // rather than raise them from nothing — which made fortifying a far duller
+  // decision than it should be.
   // ---------------------------------------------------------------------------
   start: {
     swordsmen: 1,
     archers: 2,
-    ramparts: 1,
+    ramparts: 0,
   },
 
   // Costs in Gold. With holds yielding 2–3/turn, a unit is ~1 turn's income,
@@ -138,14 +142,15 @@ export const BALANCE = {
   // against the standard 3-unit garrison:
   //
   //   hold                              was      now
-  //   forest, no wall                   2%       42%
-  //   forest + 1 rampart (the default)  0%       19%
+  //   forest, unwalled (the default)    2%       42%
+  //   forest + 1 rampart                0%       21%
   //   forest + 2 ramparts               0%        0%
+  //   mountains, unwalled               0%       21%
   //   mountains + 2 ramparts + tower    0%        0%  (15% with one more unit)
   //
   // One extra unit still takes an ordinary hold outright. What changed is that
   // an even assault is now a gamble rather than a certain loss, and stonework
-  // still buys real safety.
+  // still buys real safety — each rampart roughly halves the attacker's odds.
   // ---------------------------------------------------------------------------
   defense: {
     reductionPerPoint: 0.05,   // 5% less damage per defense point
@@ -167,7 +172,7 @@ export const BALANCE = {
   neutral: {
     swordsmen: 1,              // starting garrison per neutral hold
     archers: 2,
-    ramparts: 1,               // unclaimed holds are walled too
+    ramparts: 0,               // unclaimed holds are unwalled, like everyone's
     // (its dragon hatches on turn 5 like any region's, and defends in place)
   },
 } as const;
