@@ -8,6 +8,7 @@
  * counter, so it must not tick once per team.
  */
 
+import { growDragons, hatchEggs, type Hatching } from './dragons';
 import type { Graph } from './graph';
 import { collectIncome, resetBuilds } from './holds';
 import { activeTeam } from './players';
@@ -21,6 +22,8 @@ export interface TurnChange {
   readonly roundCompleted: boolean;
   /** Gold collected by the incoming team from the holds it controls. */
   readonly incomeCollected: number;
+  /** Eggs that hatched as this turn opened — only ever on turn 5. */
+  readonly hatchings: readonly Hatching[];
 }
 
 /**
@@ -45,6 +48,7 @@ export function currentTurn(state: GameState): TurnChange {
     activeTeamId: activeTeam(state).id,
     roundCompleted: false,
     incomeCollected: 0,
+    hatchings: [],
   };
 }
 
@@ -57,9 +61,19 @@ export function currentTurn(state: GameState): TurnChange {
  */
 export function endTurn(state: GameState, graph: Graph): TurnChange {
   const wasLastTeam = state.activeTeamIndex === state.teams.length - 1;
+  let hatchings: readonly Hatching[] = [];
 
   state.activeTeamIndex = (state.activeTeamIndex + 1) % state.teams.length;
-  if (wasLastTeam) state.turn += 1;
+
+  if (wasLastTeam) {
+    const previousTurn = state.turn;
+    state.turn += 1;
+
+    // Both hang off the turn counter, not off any team, so a four-team game
+    // hatches at the same moment a two-team game does.
+    growDragons(state, previousTurn, state.turn);
+    hatchings = hatchEggs(state);
+  }
 
   const next = activeTeam(state);
   const incomeCollected = beginTeamTurn(state, graph, next.id);
@@ -69,6 +83,7 @@ export function endTurn(state: GameState, graph: Graph): TurnChange {
     activeTeamId: next.id,
     roundCompleted: wasLastTeam,
     incomeCollected,
+    hatchings,
   };
 }
 

@@ -15,6 +15,7 @@ import {
 } from '@shared/index';
 import { createBoard } from './render/board';
 import { createDefaultGame } from './setup/defaultGame';
+import { createBattleLog } from './ui/battleLog';
 import { createHoldPanel } from './ui/holdPanel';
 import { createHud } from './ui/hud';
 
@@ -66,6 +67,7 @@ export function createApp(root: HTMLElement): void {
     onFortify,
   });
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
+  const battleLog = createBattleLog(graph);
 
   /** Holds the current selection could march into this turn. */
   function targets(): ReadonlySet<RegionId> {
@@ -81,13 +83,18 @@ export function createApp(root: HTMLElement): void {
     panel.show(selectedRegion, selectedUnits);
   }
 
+  /**
+   * Opens a hold for inspection. Deliberately selects NOTHING.
+   *
+   * This used to pre-select every unit that could march, which meant clicking a
+   * neighbouring hold just to look at it marched your whole garrison into it
+   * and left the first hold empty. Picking up an army is now an explicit act:
+   * tick units, or use Select all, and only then does a click on a highlighted
+   * hold become an order.
+   */
   function selectRegion(id: RegionId | null): void {
     selectedRegion = id;
-    // Opening a hold pre-picks everything that can actually march, which is the
-    // common case; individual units can then be unchecked in the panel.
-    selectedUnits = new Set(
-      id === null ? [] : unitsIn(state, id).filter(canOrder).map((unit) => unit.id),
-    );
+    selectedUnits = new Set();
     render();
   }
 
@@ -99,25 +106,56 @@ export function createApp(root: HTMLElement): void {
     selectRegion(id);
   }
 
+  /** Total hit points standing in a hold, whoever they belong to. */
+  function holdHealth(id: RegionId): number {
+    return unitsIn(state, id).reduce((sum, unit) => sum + unit.hp, 0);
+  }
+
+  /**
+   * Floats the health swing over both holds an order touched.
+   *
+   * Measured across the whole order rather than read out of the battle report,
+   * so a bloodless reinforcement reads the same way a siege does — the hold
+   * that gained shows a plus, the one that bled shows a minus.
+   */
+  function flashHealthChange(ids: readonly RegionId[], before: ReadonlyMap<RegionId, number>): void {
+    for (const id of ids) {
+      const was = before.get(id) ?? 0;
+      const now = holdHealth(id);
+      if (was !== now) board.flash(id, now - was, now);
+    }
+  }
+
   function march(to: RegionId): void {
     const ids = [...selectedUnits];
+    const from = selectedRegion;
+    const touched = from === null ? [to] : [from, to];
+    const before = new Map(touched.map((id) => [id, holdHealth(id)]));
+
     try {
       const result = moveUnits(state, graph, ids, to, humanPlayerId);
+      if (result.battle) battleLog.show(result.battle);
+      flashHealthChange(touched, before);
 
       switch (result.outcome) {
         case 'captured':
-          hud.say(`Took ${holdName(to)}.`);
-          break;
+          hud.say(
+            result.battle
+              ? `${holdName(to)} stormed and taken.`
+              : `Took ${holdName(to)}.`,
+          );
+          selectRegion(to);
+          return;
         case 'reinforced':
           hud.say(`Reinforced ${holdName(to)}.`);
-          break;
-        case 'battle':
-          hud.say(`${holdName(to)} is defended — sieges arrive in Phase 4.`, 'warn');
-          render();
+          selectRegion(to);
+          return;
+        case 'repelled':
+          // The survivors, if any, are still standing where they started.
+          hud.say(`The assault on ${holdName(to)} was thrown back.`, 'warn');
+          selectRegion(selectedRegion);
           return;
       }
-
-      selectRegion(to);
     } catch (error) {
       hud.say(error instanceof Error ? error.message : 'Illegal move', 'warn');
       render();
@@ -138,9 +176,11 @@ export function createApp(root: HTMLElement): void {
   }
 
   function onRecruit(regionId: RegionId, type: RecruitableType): void {
+    const before = new Map([[regionId, holdHealth(regionId)]]);
     try {
       recruit(state, regionId, type, humanPlayerId);
       hud.say(`Raised a ${type} at ${holdName(regionId)}.`);
+      flashHealthChange([regionId], before);
       // Re-open the hold so the new unit appears and is picked up for orders.
       selectRegion(regionId);
     } catch (error) {
@@ -164,6 +204,16 @@ export function createApp(root: HTMLElement): void {
     const change = endTurn(state, graph);
     selectedRegion = null;
     selectedUnits = new Set();
+
+    if (change.hatchings.length > 0) {
+      // The one turn in the game that changes everything at once.
+      hud.say(
+        `The eggs have hatched — ${change.hatchings.length} dragons wake across the realm. Turn ${change.turn}.`,
+      );
+      render();
+      return;
+    }
+
     announceTurn(change.turn, change.incomeCollected);
     render();
   }
@@ -181,12 +231,18 @@ export function createApp(root: HTMLElement): void {
 
   const stage = document.createElement('main');
   stage.className = 'stage';
-  stage.append(board.element, panel.element);
+  stage.append(board.element, panel.element, battleLog.element);
 
   // Clicking bare map, outside any banner, clears the selection.
   stage.addEventListener('click', (event) => {
     if (event.target === stage || event.target === board.element) selectRegion(null);
   });
+
+  // Dev-only handle for poking at the engine from the console. Stripped from
+  // production builds by the import.meta.env.DEV guard.
+  if (import.meta.env.DEV) {
+    (globalThis as unknown as Record<string, unknown>)['__game'] = { state, graph, map };
+  }
 
   root.append(hud.element, stage);
   announceTurn(state.turn, 0);

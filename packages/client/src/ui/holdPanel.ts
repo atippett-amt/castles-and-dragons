@@ -3,8 +3,10 @@ import {
   NEUTRAL,
   RECRUITABLE_TYPES,
   buildsRemaining,
+  damageReduction,
   defenseCap,
   defenseCost,
+  defenseRating,
   fortifyBlockedReason,
   isActiveTeamMember,
   neighbors,
@@ -12,8 +14,10 @@ import {
   playerById,
   recruitBlockedReason,
   recruitCost,
+  scorpionDamage,
   unitProfile,
   unitsIn,
+  watchtowerVolley,
   type DefenseType,
   type GameState,
   type Graph,
@@ -22,7 +26,21 @@ import {
   type RegionId,
   type Unit,
   type UnitId,
+  type UnitType,
 } from '@shared/index';
+
+/**
+ * What each unit type actually does in a siege, in one line.
+ *
+ * Lifted from the design so a player does not have to infer the rules from
+ * watching stacks die — the archer's first strike and the dragon's refusal to
+ * die are the two things that decide most battles.
+ */
+const UNIT_ROLES: Readonly<Record<UnitType, string>> = {
+  swordsman: 'Melee backbone. Takes the blows so the rest of the stack lives.',
+  archer: 'Looses a first-strike volley before any melee. Fragile up close.',
+  dragon: 'Heavy attacker, crosses open water, dies last. Scorpions are its answer.',
+};
 import { colorForOwner } from '../render/colors';
 
 export interface HoldPanel {
@@ -109,9 +127,113 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       owner,
       stats,
       ...buildSection(id),
+      ...strengthSection(id),
       ...garrisonSection(id, selectedUnitIds),
+      ...rolesSection(id),
       ...bordersSection(id),
     );
+  }
+
+  /**
+   * The same stack is worth more at home than in the field, and nothing on
+   * screen said so. This spells out both numbers side by side: what the
+   * garrison deals if it marches, and what it is worth standing here behind the
+   * terrain and whatever has been built.
+   */
+  function strengthSection(id: RegionId): HTMLElement[] {
+    const region = graph.regions.get(id);
+    const regionState = state.regions[id];
+    const garrison = unitsIn(state, id);
+    if (!region || !regionState || garrison.length === 0) return [];
+
+    const attack = garrison.reduce(
+      (sum, unit) => sum + unitProfile(unit.type, state.turn).atk,
+      0,
+    );
+    const rating = defenseRating(regionState, region.defenseBonus);
+    const reduction = damageReduction(rating);
+    const volley = watchtowerVolley(regionState);
+    const scorpion = scorpionDamage(regionState, true);
+
+    const heading = document.createElement('h3');
+    heading.className = 'panel__subtitle';
+    heading.textContent = 'Strength';
+
+    const grid = document.createElement('div');
+    grid.className = 'strength';
+
+    const column = (
+      label: string,
+      value: string,
+      detail: string,
+      variant: 'attack' | 'defense',
+    ): HTMLElement => {
+      const box = document.createElement('div');
+      box.className = `strength__box strength__box--${variant}`;
+
+      const caption = document.createElement('span');
+      caption.className = 'strength__label';
+      caption.textContent = label;
+
+      const figure = document.createElement('span');
+      figure.className = 'strength__value';
+      figure.textContent = value;
+
+      const note = document.createElement('span');
+      note.className = 'strength__detail';
+      note.textContent = detail;
+
+      box.append(caption, figure, note);
+      return box;
+    };
+
+    grid.append(
+      column('Attacking', `${attack} dmg`, 'per melee round, in the open', 'attack'),
+      column(
+        'Defending here',
+        `${attack} dmg`,
+        `takes ${Math.round(reduction * 100)}% less damage (defence ${rating})`,
+        'defense',
+      ),
+    );
+
+    const extras: string[] = [];
+    if (volley > 0) extras.push(`Watchtowers open with ${volley} damage.`);
+    if (scorpion > 0) extras.push(`Scorpions put ${scorpion} a round into any attacking dragon.`);
+
+    const result: HTMLElement[] = [heading, grid];
+    if (extras.length > 0) {
+      const note = document.createElement('p');
+      note.className = 'panel__hint';
+      note.textContent = extras.join(' ');
+      result.push(note);
+    }
+    return result;
+  }
+
+  /** A key for the unit types actually standing here — not an abstract table. */
+  function rolesSection(id: RegionId): HTMLElement[] {
+    const present = [...new Set(unitsIn(state, id).map((unit) => unit.type))];
+    if (present.length === 0) return [];
+
+    const heading = document.createElement('h3');
+    heading.className = 'panel__subtitle';
+    heading.textContent = 'Roles';
+
+    const list = document.createElement('dl');
+    list.className = 'roles';
+    for (const type of present) {
+      const term = document.createElement('dt');
+      term.className = `roles__type roles__type--${type}`;
+      term.textContent = type;
+
+      const detail = document.createElement('dd');
+      detail.textContent = UNIT_ROLES[type];
+
+      list.append(term, detail);
+    }
+
+    return [heading, list];
   }
 
   /**
@@ -186,9 +308,19 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
     if (units.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'panel__empty';
-      empty.textContent = 'No garrison.';
+      empty.textContent = 'No garrison. This hold will fall to anyone who walks in.';
       return [heading, empty];
     }
+
+    // Whose these are decides everything about how to read the list: your own
+    // can be ordered out, anyone else's are what you would have to fight.
+    const holder = units[0]!.owner;
+    const allegiance = document.createElement('p');
+    allegiance.className = `allegiance allegiance--${holder === actingPlayer ? 'mine' : 'theirs'}`;
+    allegiance.textContent =
+      holder === actingPlayer
+        ? 'Yours — can be ordered out to attack.'
+        : `${ownerLabel(holder)} — these defend the hold if you assault it.`;
 
     const orderable = units.filter(canOrder);
     const list = document.createElement('ul');
@@ -210,9 +342,13 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       label.className = 'unit__name';
       label.textContent = unit.type;
 
+      const profile = unitProfile(unit.type, state.turn);
+
       const health = document.createElement('span');
       health.className = 'unit__hp';
-      health.textContent = `${unit.hp} / ${unitProfile(unit.type, state.turn).hp} hp`;
+      // Attack is shown alongside health because a dragon's grows every turn,
+      // and that growth is the clock the whole late game runs on.
+      health.textContent = `${unit.hp}/${profile.hp} hp · ${profile.atk} atk`;
 
       const moves = document.createElement('span');
       moves.className = 'unit__moves';
@@ -226,7 +362,7 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
       list.append(item);
     }
 
-    const result: HTMLElement[] = [heading, list];
+    const result: HTMLElement[] = [heading, allegiance, list];
 
     if (orderable.length > 0) {
       const actions = document.createElement('div');
@@ -246,7 +382,10 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
 
       const hint = document.createElement('p');
       hint.className = 'panel__hint';
-      hint.textContent = 'Pick a stack, then click a highlighted hold to march.';
+      hint.textContent =
+        selectedUnitIds.size === 0
+          ? 'Tick units, or Select all, to raise a marching force.'
+          : 'Now click a highlighted hold to march. Clicking elsewhere just looks.';
 
       actions.append(all, none);
       result.push(actions, hint);

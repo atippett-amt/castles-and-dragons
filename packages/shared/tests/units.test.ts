@@ -2,6 +2,7 @@
 import {
   BALANCE,
   IllegalMoveError,
+  NEUTRAL,
   buildGraph,
   createInitialState,
   dragonStat,
@@ -21,6 +22,7 @@ import {
   type MapData,
 } from '@shared/index';
 import rawHolds from '../data/maps/holds.json';
+import { clearNeutralGarrisons } from './helpers';
 
 const map: MapData = loadMap(rawHolds);
 const graph: Graph = buildGraph(map);
@@ -84,8 +86,18 @@ describe('starting garrisons', () => {
     expect(florence.every((u) => u.owner === 'p0')).toBe(true);
   });
 
-  it('leaves neutral holds empty until Phase 4 garrisons them', () => {
-    expect(unitsIn(state, 'killen')).toHaveLength(0);
+  it('garrisons every neutral hold', () => {
+    // Unclaimed holds are guarded, so the early game is a fight rather than a
+    // land grab decided by who clicks fastest.
+    const killen = unitsIn(state, 'killen');
+    expect(killen.filter((u) => u.type === 'swordsman')).toHaveLength(BALANCE.neutral.swordsmen);
+    expect(killen.filter((u) => u.type === 'archer')).toHaveLength(BALANCE.neutral.archers);
+    expect(killen.every((u) => u.owner === NEUTRAL)).toBe(true);
+  });
+
+  it('leaves neutral garrisons unowned, so nobody can order them', () => {
+    expect(unitsOfTeam(state, 'north').some((u) => u.owner === NEUTRAL)).toBe(false);
+    expect(unitsOfTeam(state, 'south').some((u) => u.owner === NEUTRAL)).toBe(false);
   });
 
   it('assigns deterministic unit ids', () => {
@@ -167,6 +179,11 @@ describe('legalDestinations', () => {
 });
 
 describe('moveUnits', () => {
+  // These cover movement and ownership, not sieges — combat.test.ts owns those.
+  beforeEach(() => {
+    clearNeutralGarrisons(state);
+  });
+
   it('captures an empty neutral hold and flips ownership', () => {
     const movers = unitsIn(state, 'florence').map((u) => u.id);
     const result = moveUnits(state, graph, movers, 'bailey_springs', 'p0');
@@ -195,18 +212,16 @@ describe('moveUnits', () => {
     expect(result.outcome).toBe('reinforced');
   });
 
-  it('reports a battle and changes nothing when defenders are present', () => {
+  it('fights a siege when defenders are present', () => {
     spawnUnit(state, 'swordsman', 'p1', 'bailey_springs');
     const movers = unitsIn(state, 'florence').map((u) => u.id);
 
     const result = moveUnits(state, graph, movers, 'bailey_springs', 'p0');
 
-    expect(result.outcome).toBe('battle');
-    expect(result.movedUnitIds).toEqual([]);
-    // Phase 4 replaces this branch with a real siege; until then nothing moves.
-    expect(getRegion(state, 'bailey_springs').owner).toBe('neutral');
-    expect(unitsIn(state, 'florence')).toHaveLength(movers.length);
-    expect(unitsIn(state, 'florence').every((u) => u.movesLeft === 1)).toBe(true);
+    // The detailed resolution is combat.test.ts's job; here we only care that a
+    // defended hold routes into a battle rather than being walked into.
+    expect(result.battle).toBeDefined();
+    expect(['captured', 'repelled']).toContain(result.outcome);
   });
 
   it('lets a dragon take two steps in one turn', () => {
@@ -264,6 +279,7 @@ describe('moveUnits', () => {
       ],
       teams: [{ id: 'allies', name: 'Allies' }],
     });
+    clearNeutralGarrisons(coop);
 
     const theirs = unitsIn(coop, 'killen').map((unit) => unit.id);
     expect(() => moveUnits(coop, graph, theirs, 'bailey_springs', 'a')).toThrow(
