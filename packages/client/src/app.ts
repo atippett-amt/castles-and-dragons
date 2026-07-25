@@ -1,7 +1,9 @@
 import {
   activeTeam,
+  dominantUnitType,
   endTurn,
   fortify,
+  getUnit,
   takeAiTeamTurn,
   teamIsAllAI,
   type AiAction,
@@ -138,9 +140,17 @@ export function createApp(root: HTMLElement): void {
     const before = new Map(touched.map((id) => [id, holdHealth(id)]));
 
     try {
+      // Captured before the order resolves — the attackers move, and after a
+      // siege some of them will not exist to be counted.
+      const spearhead = dominantUnitType(ids.map((id) => getUnit(state, id)));
+
       const result = moveUnits(state, graph, ids, to, humanPlayerId);
       if (result.battle) battleLog.show(result.battle);
       flashHealthChange(touched, before);
+
+      if (result.battle && from !== null) {
+        board.strike({ from, to, spearhead, captured: result.outcome === 'captured' });
+      }
 
       switch (result.outcome) {
         case 'captured':
@@ -216,6 +226,8 @@ export function createApp(root: HTMLElement): void {
   function onEndTurn(): void {
     selectedRegion = null;
     selectedUnits = new Set();
+    // A new turn wipes the last one's battles off the map.
+    board.clearStrikes();
 
     let change = endTurn(state, graph);
     let hatched = change.hatchings.length;
@@ -229,6 +241,7 @@ export function createApp(root: HTMLElement): void {
     }
 
     turnReport.show(aiActions, change.turn);
+    replayAiAttacks(aiActions);
 
     if (hatched > 0) {
       // The one turn in the game that changes everything at once.
@@ -238,6 +251,34 @@ export function createApp(root: HTMLElement): void {
     }
 
     render();
+  }
+
+  /**
+   * Draws the assaults the opponents just made.
+   *
+   * They resolved instantly in state, so this is replay rather than suspense —
+   * but without it the board simply looks different when it returns to you and
+   * you have to read the report to find out who hit whom. Staggered so a turn
+   * with several battles reads as a sequence instead of a single flash.
+   */
+  function replayAiAttacks(actions: readonly AiAction[]): void {
+    const assaults = actions.filter(
+      (action) => action.kind === 'attack' && action.from !== undefined,
+    );
+
+    // Tighten the gap when a turn is busy, so eight battles do not take six
+    // seconds to play out.
+    const step = assaults.length > 4 ? 200 : 450;
+
+    assaults.forEach((action, index) => {
+      board.strike({
+        from: action.from!,
+        to: action.regionId,
+        spearhead: action.spearhead ?? 'swordsman',
+        captured: action.captured === true,
+        delayMs: index * step,
+      });
+    });
   }
 
   function announceTurn(turn: number, income: number): void {

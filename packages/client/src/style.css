@@ -497,6 +497,121 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Assaults — a strike crossing the map, and the clash where it lands
+   -------------------------------------------------------------------------- */
+
+.strike {
+  position: absolute;
+  z-index: 6;
+  font-size: 1.15rem;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 8px rgb(0 0 0 / 90%);
+  animation: strike-fly 900ms cubic-bezier(0.35, 0, 0.5, 1) forwards;
+}
+
+.strike--swordsman {
+  color: #e8e0cc;
+}
+
+.strike--archer {
+  color: #d8c67a;
+}
+
+.strike--dragon {
+  color: #e8563f;
+  font-size: 1.45rem;
+  text-shadow: 0 0 14px rgb(232 86 63 / 90%);
+}
+
+/* Travels from the attacker's banner to the defender's. The offsets are set in
+   pixels at fire time — a transform cannot interpolate between two percentage
+   positions of a parent it is not sized by. */
+@keyframes strike-fly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(0.5);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scale(1.15);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+      rotate(var(--angle, 0deg)) scale(0.9);
+  }
+}
+
+.clash {
+  position: absolute;
+  z-index: 6;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin: -1.2rem 0 0 -1.2rem;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: clash-burst 700ms ease-out forwards;
+}
+
+.clash--taken {
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 18px rgb(226 176 63 / 80%);
+}
+
+.clash--held {
+  border: 2px solid #7fa8c9;
+  box-shadow: 0 0 18px rgb(127 168 201 / 70%);
+}
+
+@keyframes clash-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/* The defender reels at the moment of impact. */
+.banner--struck {
+  animation: banner-reel 420ms ease-in-out;
+}
+
+@keyframes banner-reel {
+  0%, 100% {
+    transform: translate(-50%, -50%);
+  }
+  20% {
+    transform: translate(calc(-50% - 4px), -50%) rotate(-3deg);
+  }
+  50% {
+    transform: translate(calc(-50% + 4px), -50%) rotate(3deg);
+  }
+  75% {
+    transform: translate(calc(-50% - 2px), -50%) rotate(-1.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strike,
+  .clash,
+  .banner--struck {
+    animation-duration: 1ms;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Floating health change over a hold
    -------------------------------------------------------------------------- */
 
