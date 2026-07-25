@@ -38,6 +38,9 @@ export type RecruitableType = (typeof RECRUITABLE_TYPES)[number];
 export const DEFENSE_TYPES = ['ramparts', 'watchtower', 'scorpion'] as const;
 export type DefenseType = (typeof DEFENSE_TYPES)[number];
 
+export const DIFFICULTIES = ['easy', 'normal', 'hard'] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
+
 /** Normalized (0–1) position for placing a hold's banner over the map image. */
 export interface LabelPos {
   readonly x: number;
@@ -122,6 +125,8 @@ export interface Player {
   readonly name: string;
   readonly teamId: TeamId;
   readonly isAI: boolean;
+  /** Only meaningful when isAI. Lives in state so Stage B's server can run it. */
+  readonly difficulty: Difficulty;
   gold: number;
 }
 

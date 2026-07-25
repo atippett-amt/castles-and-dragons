@@ -2,6 +2,9 @@ import {
   activeTeam,
   endTurn,
   fortify,
+  takeAiTeamTurn,
+  teamIsAllAI,
+  type AiAction,
   isActiveTeamMember,
   legalDestinations,
   moveUnits,
@@ -16,6 +19,7 @@ import {
 import { createBoard } from './render/board';
 import { createDefaultGame } from './setup/defaultGame';
 import { createBattleLog } from './ui/battleLog';
+import { createTurnReport } from './ui/turnReport';
 import { createHoldPanel } from './ui/holdPanel';
 import { createHud } from './ui/hud';
 
@@ -68,6 +72,7 @@ export function createApp(root: HTMLElement): void {
   });
   const board = createBoard({ map, graph, state, onSelect: onHoldClick });
   const battleLog = createBattleLog(graph);
+  const turnReport = createTurnReport(state, graph);
 
   /** Holds the current selection could march into this turn. */
   function targets(): ReadonlySet<RegionId> {
@@ -200,30 +205,45 @@ export function createApp(root: HTMLElement): void {
     }
   }
 
+  /**
+   * Ends your turn, then plays every AI turn until the board is yours again.
+   *
+   * The opponents resolve in one go rather than pausing between them: with up
+   * to seven of them a per-turn pause would be tedious, and the turn report
+   * says what happened. The guard is a safety net — a game with no human team
+   * would otherwise spin forever.
+   */
   function onEndTurn(): void {
-    const change = endTurn(state, graph);
     selectedRegion = null;
     selectedUnits = new Set();
 
-    if (change.hatchings.length > 0) {
-      // The one turn in the game that changes everything at once.
-      hud.say(
-        `The eggs have hatched — ${change.hatchings.length} dragons wake across the realm. Turn ${change.turn}.`,
-      );
-      render();
-      return;
+    let change = endTurn(state, graph);
+    let hatched = change.hatchings.length;
+    const aiActions: AiAction[] = [];
+
+    let guard = 0;
+    while (teamIsAllAI(state, activeTeam(state).id) && guard++ < 64) {
+      aiActions.push(...takeAiTeamTurn(state, graph, activeTeam(state).id));
+      change = endTurn(state, graph);
+      hatched += change.hatchings.length;
     }
 
-    announceTurn(change.turn, change.incomeCollected);
+    turnReport.show(aiActions, change.turn);
+
+    if (hatched > 0) {
+      // The one turn in the game that changes everything at once.
+      hud.say(`The eggs have hatched — ${hatched} dragons wake across the realm. Turn ${change.turn}.`);
+    } else {
+      announceTurn(change.turn, change.incomeCollected);
+    }
+
     render();
   }
 
   function announceTurn(turn: number, income: number): void {
-    const name = activeTeam(state).name;
     if (isAiTurn()) {
-      // Phase 6 makes this turn play itself. Saying so beats leaving a player
-      // clicking at a board that will not respond.
-      hud.say(`${name} (AI) — no AI yet, End Turn to continue. Turn ${turn}.`, 'warn');
+      // Only reachable if every team is AI — nothing for a human to do.
+      hud.say(`${activeTeam(state).name} (AI) holds the turn. Turn ${turn}.`, 'warn');
     } else {
       hud.say(`Your move — turn ${turn}. Collected ${income} gold.`);
     }
@@ -231,7 +251,7 @@ export function createApp(root: HTMLElement): void {
 
   const stage = document.createElement('main');
   stage.className = 'stage';
-  stage.append(board.element, panel.element, battleLog.element);
+  stage.append(board.element, panel.element, battleLog.element, turnReport.element);
 
   // Clicking bare map, outside any banner, clears the selection.
   stage.addEventListener('click', (event) => {

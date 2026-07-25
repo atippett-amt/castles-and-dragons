@@ -18,6 +18,7 @@ import {
   type MapData,
   type Player,
   type PlayerId,
+  type Difficulty,
   type RegionId,
   type RegionState,
   type Team,
@@ -37,6 +38,8 @@ export interface PlayerSetup {
   readonly name: string;
   readonly teamId: TeamId;
   readonly isAI: boolean;
+  /** Defaults to 'normal'. Ignored for human players. */
+  readonly difficulty?: Difficulty;
   /** Explicit starting hold. Auto-assigned when omitted. */
   readonly startRegion?: RegionId;
 }
@@ -190,6 +193,7 @@ export function createInitialState(options: CreateStateOptions): GameState {
         name: player.name,
         teamId: player.teamId,
         isAI: player.isAI,
+        difficulty: player.difficulty ?? 'normal',
         gold: BALANCE.economy.startingGold,
       }),
     ),
