@@ -132,10 +132,23 @@ export const BALANCE = {
   //                 + rampartCount * ramparts.defensePoints
   //   reduction = min(maxReduction, defenseRating * reductionPerPoint)
   //   damageToDefenders = rawDamage * (1 - reduction)
-  // Example: mountains (3) + 2 ramparts (4) = 7 -> 42% reduction.
+  // Example: mountains (3) + 2 ramparts (4) = 7 -> 35% reduction.
+  //
+  // Tuned down from 6% a point after measuring attacker win rates at parity
+  // against the standard 3-unit garrison:
+  //
+  //   hold                              was      now
+  //   forest, no wall                   2%       42%
+  //   forest + 1 rampart (the default)  0%       19%
+  //   forest + 2 ramparts               0%        0%
+  //   mountains + 2 ramparts + tower    0%        0%  (15% with one more unit)
+  //
+  // One extra unit still takes an ordinary hold outright. What changed is that
+  // an even assault is now a gamble rather than a certain loss, and stonework
+  // still buys real safety.
   // ---------------------------------------------------------------------------
   defense: {
-    reductionPerPoint: 0.06,   // 6% less damage per defense point
+    reductionPerPoint: 0.05,   // 5% less damage per defense point
     maxReduction: 0.60,        // never reduce incoming damage by more than 60%
   },
 

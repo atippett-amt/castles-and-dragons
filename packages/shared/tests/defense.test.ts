@@ -48,14 +48,16 @@ describe('defenseRating and damageReduction', () => {
     expect(defenseRating(region, 3)).toBe(3 + BALANCE.ramparts.defensePoints);
   });
 
-  it('matches the worked example: mountains plus two ramparts is 42%', () => {
+  it('stacks terrain and ramparts into one rating', () => {
     const region = hold();
     addDefense(region, 'ramparts');
     addDefense(region, 'ramparts');
 
-    const rating = defenseRating(region, 3); // 3 + 2*2 = 7
-    expect(rating).toBe(7);
-    expect(damageReduction(rating)).toBeCloseTo(0.42, 5);
+    // Mountains (3) plus two ramparts at 2 points each.
+    const rating = defenseRating(region, 3);
+    expect(rating).toBe(3 + 2 * BALANCE.ramparts.defensePoints);
+    // Read from BALANCE rather than restated, so tuning does not break this.
+    expect(damageReduction(rating)).toBeCloseTo(rating * BALANCE.defense.reductionPerPoint, 5);
   });
 
   it('never exceeds the cap, so no hold becomes untakeable', () => {

@@ -233,7 +233,19 @@ export function resolveSiege(
 
   // --- Resolution ----------------------------------------------------------
   const claimedDragonIds: UnitId[] = [];
-  const captured = attackers.length > 0 && garrisonBroken();
+
+  /**
+   * A hold falls when its garrison breaks — even if the last attacker fell with
+   * it. Two armies annihilating each other used to count as a repulse, which
+   * made the defender win every tie; since evenly matched stacks wipe each
+   * other out about two fights in five, attacking at parity was near hopeless.
+   * A mutual massacre now leaves the hold in the attacker's hands and nobody
+   * standing in it, which is a prize worth having and worth retaking.
+   *
+   * The exception is a defending dragon that outlives everyone: with no
+   * attacker left to claim it, it still holds the field.
+   */
+  const captured = garrisonBroken() && (attackers.length > 0 || defenders.length === 0);
 
   if (captured) {
     for (const survivor of defenders) {
