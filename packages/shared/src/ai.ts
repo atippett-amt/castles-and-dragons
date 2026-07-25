@@ -25,7 +25,7 @@ import { fortify, fortifyBlockedReason, recruit, recruitBlockedReason } from './
 import { legalDestinations, moveUnits } from './orders';
 import { areAllied, playerById } from './players';
 import { allRegions, getRegion } from './regions';
-import { defendersAgainst, unitProfile, unitsIn } from './units';
+import { defendersAgainst, dominantUnitType, unitProfile, unitsIn } from './units';
 import {
   NEUTRAL,
   type DefenseType,
@@ -35,6 +35,7 @@ import {
   type RecruitableType,
   type RegionId,
   type Unit,
+  type UnitType,
 } from './types';
 
 export interface AiSettings {
@@ -59,9 +60,14 @@ export const AI_SETTINGS: Readonly<Record<Difficulty, AiSettings>> = {
 export interface AiAction {
   readonly playerId: PlayerId;
   readonly kind: 'recruit' | 'fortify' | 'march' | 'attack';
+  /** The hold acted on — built at, marched into, or assaulted. */
   readonly regionId: RegionId;
+  /** Where a march or assault set out from, so the client can draw it. */
+  readonly from?: RegionId;
   /** What was raised or built, for build actions. */
   readonly what?: RecruitableType | DefenseType;
+  /** What led the attack, so the client knows whether to draw a dragon. */
+  readonly spearhead?: UnitType;
   /** Whether an attack took the hold. */
   readonly captured?: boolean;
 }
@@ -333,6 +339,8 @@ function movePass(
     if (target === null) continue;
 
     const contested = defendersAgainst(state, target, owner).length > 0;
+    const spearhead = dominantUnitType(stack);
+    const origin = region.id;
     const result = moveUnits(
       state,
       graph,
@@ -347,9 +355,11 @@ function movePass(
             playerId: owner,
             kind: 'attack',
             regionId: target,
+            from: origin,
+            spearhead,
             captured: result.outcome === 'captured',
           }
-        : { playerId: owner, kind: 'march', regionId: target },
+        : { playerId: owner, kind: 'march', regionId: target, from: origin, spearhead },
     );
   }
 

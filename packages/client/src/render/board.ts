@@ -17,6 +17,23 @@ import { EDGE_STYLE, colorForOwner } from './colors';
 /** How long a floating health change stays on screen, in milliseconds. */
 const FLOAT_LIFETIME_MS = 4200;
 
+/** How long a strike takes to cross from attacker to defender. */
+const STRIKE_TRAVEL_MS = 900;
+/** Total life of a strike, including the clash at the far end. */
+const STRIKE_LIFETIME_MS = 2000;
+
+/**
+ * What an attack looks like, by whatever led it.
+ *
+ * Deliberately the same glyph vocabulary already on the board — the dragon mark
+ * over a hold and the one that comes flying at you are the same shape.
+ */
+const STRIKE_GLYPH: Readonly<Record<UnitType, string>> = {
+  swordsman: '⚔',
+  archer: '➤',
+  dragon: '▲',
+};
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export interface Board {
@@ -28,7 +45,20 @@ export interface Board {
   highlight(ids: ReadonlySet<RegionId>): void;
   /** Floats a health change above a hold, with what it has left. */
   flash(regionId: RegionId, delta: number, remaining: number): void;
+  /** Sends an attack across the map and lands it on the defender. */
+  strike(options: StrikeOptions): void;
+  /** Drops any assault still in flight. Called when a new turn begins. */
+  clearStrikes(): void;
   readonly selected: RegionId | null;
+}
+
+export interface StrikeOptions {
+  readonly from: RegionId;
+  readonly to: RegionId;
+  readonly spearhead: UnitType;
+  readonly captured: boolean;
+  /** Staggers several attacks in one turn so they read as a sequence. */
+  readonly delayMs?: number;
 }
 
 export interface BoardOptions {
@@ -67,6 +97,15 @@ export function createBoard(options: BoardOptions): Board {
   const banners = new Map<RegionId, HTMLButtonElement>();
   const readouts = new Map<RegionId, HTMLElement>();
   let selected: RegionId | null = null;
+
+  /**
+   * Assaults still playing, so a new turn can sweep them away.
+   *
+   * Without this they accumulate: each strike lives two seconds and a turn with
+   * several battles staggers them further, so a player clicking briskly through
+   * turns ends up with a dozen overlapping animations on screen at once.
+   */
+  const inFlight = new Set<{ nodes: readonly Element[]; timers: readonly number[] }>();
 
   for (const region of map.regions) {
     const readout = createReadout(region);
@@ -124,6 +163,66 @@ export function createBoard(options: BoardOptions): Board {
       // up for players who have animations turned off. Kept in step with the
       // CSS duration via FLOAT_LIFETIME_MS.
       setTimeout(() => float.remove(), FLOAT_LIFETIME_MS);
+    },
+    strike({ from, to, spearhead, captured, delayMs = 0 }) {
+      const origin = banners.get(from);
+      const target = banners.get(to);
+      if (!origin || !target) return;
+
+      // Measured in pixels at fire time rather than kept as percentages: the
+      // travel is a transform, and a transform cannot interpolate between two
+      // percentage positions of a parent it is not sized by.
+      const a = origin.getBoundingClientRect();
+      const b = target.getBoundingClientRect();
+      const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+      const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+
+      const missile = document.createElement('div');
+      missile.className = `strike strike--${spearhead}`;
+      missile.textContent = STRIKE_GLYPH[spearhead];
+      missile.style.left = origin.style.left;
+      missile.style.top = origin.style.top;
+      missile.style.setProperty('--dx', `${dx}px`);
+      missile.style.setProperty('--dy', `${dy}px`);
+      // Arrows and swords fly point-first; a dragon keeps its own bearing.
+      if (spearhead !== 'dragon') {
+        missile.style.setProperty('--angle', `${(Math.atan2(dy, dx) * 180) / Math.PI}deg`);
+      }
+      missile.style.animationDelay = `${delayMs}ms`;
+
+      const clash = document.createElement('div');
+      clash.className = `clash clash--${captured ? 'taken' : 'held'}`;
+      clash.style.left = target.style.left;
+      clash.style.top = target.style.top;
+      clash.style.animationDelay = `${delayMs + STRIKE_TRAVEL_MS}ms`;
+
+      element.append(missile, clash);
+
+      // The defender reels at the moment of impact.
+      const shakeAt = window.setTimeout(() => {
+        target.classList.add('banner--struck');
+        window.setTimeout(() => target.classList.remove('banner--struck'), 420);
+      }, delayMs + STRIKE_TRAVEL_MS);
+
+      const handle = { nodes: [missile, clash] as const, timers: [shakeAt] as number[] };
+      inFlight.add(handle);
+
+      handle.timers.push(
+        window.setTimeout(() => {
+          missile.remove();
+          clash.remove();
+          target.classList.remove('banner--struck');
+          inFlight.delete(handle);
+        }, delayMs + STRIKE_LIFETIME_MS),
+      );
+    },
+    clearStrikes() {
+      for (const handle of inFlight) {
+        for (const timer of handle.timers) window.clearTimeout(timer);
+        for (const node of handle.nodes) node.remove();
+      }
+      inFlight.clear();
+      for (const banner of banners.values()) banner.classList.remove('banner--struck');
     },
     refresh() {
       for (const region of map.regions) {

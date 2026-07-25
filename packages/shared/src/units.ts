@@ -77,6 +77,19 @@ export function unitsOfTeam(state: GameState, teamId: TeamId): readonly Unit[] {
   return allUnits(state).filter((unit) => members.has(unit.owner));
 }
 
+/**
+ * The unit type that best characterises a stack.
+ *
+ * A dragon defines any force it flies with; otherwise whichever of foot or bow
+ * is more numerous. Used to decide what an attack looks like on the board.
+ */
+export function dominantUnitType(units: readonly Unit[]): UnitType {
+  if (units.some((unit) => unit.type === 'dragon')) return 'dragon';
+  const archers = units.filter((unit) => unit.type === 'archer').length;
+  const swordsmen = units.filter((unit) => unit.type === 'swordsman').length;
+  return archers > swordsmen ? 'archer' : 'swordsman';
+}
+
 /** Units in a region that are NOT allied with `owner` — i.e. would defend it. */
 export function defendersAgainst(
   state: GameState,
