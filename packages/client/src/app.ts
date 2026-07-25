@@ -83,13 +83,18 @@ export function createApp(root: HTMLElement): void {
     panel.show(selectedRegion, selectedUnits);
   }
 
+  /**
+   * Opens a hold for inspection. Deliberately selects NOTHING.
+   *
+   * This used to pre-select every unit that could march, which meant clicking a
+   * neighbouring hold just to look at it marched your whole garrison into it
+   * and left the first hold empty. Picking up an army is now an explicit act:
+   * tick units, or use Select all, and only then does a click on a highlighted
+   * hold become an order.
+   */
   function selectRegion(id: RegionId | null): void {
     selectedRegion = id;
-    // Opening a hold pre-picks everything that can actually march, which is the
-    // common case; individual units can then be unchecked in the panel.
-    selectedUnits = new Set(
-      id === null ? [] : unitsIn(state, id).filter(canOrder).map((unit) => unit.id),
-    );
+    selectedUnits = new Set();
     render();
   }
 
@@ -205,6 +210,12 @@ export function createApp(root: HTMLElement): void {
   stage.addEventListener('click', (event) => {
     if (event.target === stage || event.target === board.element) selectRegion(null);
   });
+
+  // Dev-only handle for poking at the engine from the console. Stripped from
+  // production builds by the import.meta.env.DEV guard.
+  if (import.meta.env.DEV) {
+    (globalThis as unknown as Record<string, unknown>)['__game'] = { state, graph, map };
+  }
 
   root.append(hud.element, stage);
   announceTurn(state.turn, 0);

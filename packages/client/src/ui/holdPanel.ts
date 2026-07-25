@@ -250,7 +250,10 @@ export function createHoldPanel(options: HoldPanelOptions): HoldPanel {
 
       const hint = document.createElement('p');
       hint.className = 'panel__hint';
-      hint.textContent = 'Pick a stack, then click a highlighted hold to march.';
+      hint.textContent =
+        selectedUnitIds.size === 0
+          ? 'Tick units, or Select all, to raise a marching force.'
+          : 'Now click a highlighted hold to march. Clicking elsewhere just looks.';
 
       actions.append(all, none);
       result.push(actions, hint);
