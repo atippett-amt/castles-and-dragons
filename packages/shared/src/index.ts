@@ -24,3 +24,5 @@ export * from './victory';
 export * from './turn';
 export * from './ai';
 export * from './state';
+export * from './setup';
+export * from './save';

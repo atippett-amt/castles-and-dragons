@@ -1,7 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
+import { gameFromChoices } from '../src/setup/game';
 
 let root: HTMLElement;
+let newGameRequests: number;
+
+/** Free-for-all puts the human on Underwood-Petersville, mountains in the north. */
+const startGame = (): void => {
+  createApp(
+    root,
+    gameFromChoices({
+      preset: 'ffa',
+      playerCount: 4,
+      humanName: 'You',
+      humanSide: 'north',
+      difficulty: 'normal',
+    }),
+    { onNewGame: () => (newGameRequests += 1) },
+  );
+};
 
 const banner = (region: string): HTMLElement =>
   root.querySelector(`[data-region="${region}"].banner`)!;
@@ -21,10 +38,12 @@ const endTurn = (): void => buttonSaying('End Turn')!.click();
 const panelTitle = (): string => root.querySelector('.panel__title')?.textContent ?? '';
 
 beforeEach(() => {
+  localStorage.clear();
   document.body.replaceChildren();
   root = document.createElement('div');
   document.body.append(root);
-  createApp(root);
+  newGameRequests = 0;
+  startGame();
 });
 
 afterEach(() => {
@@ -126,7 +145,7 @@ describe('taking a turn', () => {
 });
 
 describe('the end of a game', () => {
-  it('shows the result, freezes the turn, and restarts clean', () => {
+  it('shows the result, freezes the turn, and offers a way out', () => {
     vi.useFakeTimers();
 
     // Sit on our hands until somebody wins.
@@ -147,12 +166,54 @@ describe('the end of a game', () => {
     expect(root.querySelector('.hud__turn')!.textContent).toBe(frozen);
 
     buttonSaying('Play again')!.click();
+    expect(newGameRequests).toBe(1);
+  });
+});
 
-    expect(root.querySelector('.hud__turn')!.textContent).toBe('Turn 1 / 100');
-    expect(root.querySelector<HTMLElement>('.gameover')!.hidden).toBe(true);
-    // Rebuilt rather than layered on top of the old game.
-    expect(root.querySelectorAll('.hud')).toHaveLength(1);
-    expect(root.querySelectorAll('.stage')).toHaveLength(1);
-    expect(root.querySelectorAll('.board')).toHaveLength(1);
+describe('saving', () => {
+  it('writes the game out as it goes', () => {
+    expect(localStorage.getItem('castles-and-dragons/save')).not.toBeNull();
+
+    endTurn();
+    const saved = JSON.parse(localStorage.getItem('castles-and-dragons/save')!);
+    expect(saved.state.turn).toBe(2);
+    expect(saved.humanPlayerId).toBe('p0');
+  });
+
+  it('keeps the save in step with what the board shows', () => {
+    banner('underwood_petersville').click();
+    buttonSaying('Select all')!.click();
+    banner('florence').click();
+
+    const saved = JSON.parse(localStorage.getItem('castles-and-dragons/save')!);
+    const inState = Object.values(saved.state.units as Record<string, { regionId: string }>).filter(
+      (unit) => unit.regionId === 'underwood_petersville',
+    ).length;
+
+    expect(inState).toBe(garrison('underwood_petersville'));
+  });
+});
+
+describe('starting over', () => {
+  it('asks twice before throwing a game away', () => {
+    const button = buttonSaying('New game')!;
+
+    button.click();
+    expect(newGameRequests).toBe(0);
+    expect(button.textContent).toBe('Sure?');
+
+    button.click();
+    expect(newGameRequests).toBe(1);
+  });
+
+  it('disarms itself if you do anything else', () => {
+    const button = buttonSaying('New game')!;
+    button.click();
+    expect(button.textContent).toBe('Sure?');
+
+    endTurn();
+
+    expect(button.textContent).toBe('New game');
+    expect(newGameRequests).toBe(0);
   });
 });

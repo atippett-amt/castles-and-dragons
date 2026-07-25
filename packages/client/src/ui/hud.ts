@@ -17,11 +17,12 @@ export interface HudOptions {
   readonly onZoomOut: () => void;
   readonly onFit: () => void;
   readonly onFullscreen: () => void;
+  readonly onNewGame: () => void;
 }
 
 /** Top bar: which realm, which turn, whose move, and the End Turn control. */
 export function createHud(options: HudOptions): Hud {
-  const { state, onEndTurn, onZoomIn, onZoomOut, onFit, onFullscreen } = options;
+  const { state, onEndTurn, onZoomIn, onZoomOut, onFit, onFullscreen, onNewGame } = options;
 
   const element = document.createElement('header');
   element.className = 'hud';
@@ -69,7 +70,34 @@ export function createHud(options: HudOptions): Hud {
   zoom.className = 'zoom';
   zoom.append(zoomOut, zoomLevel, zoomIn, iconButton('⤢', 'Fullscreen', onFullscreen));
 
-  element.append(realm, turn, team, treasury, message, createLegend(), zoom, endTurn);
+  // Two-step, because one stray click should not throw a game away. Resets if
+  // the player does anything else, so it cannot stay armed.
+  let armed = false;
+  const newGame = document.createElement('button');
+  newGame.type = 'button';
+  newGame.className = 'button';
+  newGame.textContent = 'New game';
+  newGame.addEventListener('click', () => {
+    if (armed) {
+      onNewGame();
+      return;
+    }
+    armed = true;
+    newGame.textContent = 'Sure?';
+    newGame.classList.add('button--armed');
+  });
+
+  const disarm = (): void => {
+    if (!armed) return;
+    armed = false;
+    newGame.textContent = 'New game';
+    newGame.classList.remove('button--armed');
+  };
+  element.addEventListener('click', (event) => {
+    if (event.target !== newGame) disarm();
+  });
+
+  element.append(realm, turn, team, treasury, message, createLegend(), zoom, newGame, endTurn);
 
   function setZoom(current: number, max: number): void {
     zoomLevel.textContent = `${Math.round(current * 100)}%`;
