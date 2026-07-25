@@ -31,7 +31,9 @@ If you bump Vite, run `npm ci` on a clean checkout before pushing.
 npm install         # once, from the repo root
 npm run dev         # Vite dev server for the client
 npm run build       # production build -> packages/client/dist
-npm test            # Vitest, all packages
+npm test            # both suites
+npm test -- --project shared   # rules engine only, under plain Node
+npm test -- --project client   # UI only, under jsdom
 npm run typecheck   # tsc --noEmit across shared + client
 ```
 
@@ -44,6 +46,17 @@ packages/
 ├── client/   # Vite app. Sends Orders, renders results. Never authoritative.
 └── server/   # Empty until Stage B.
 ```
+
+## Tests
+
+Two suites, deliberately separated in `vitest.config.ts`:
+
+- **shared** runs under plain **Node**, with no DOM at all. That is not just
+  tidiness — it is the enforcement of rule 1 below. A stray `document` reference
+  in the rules engine fails the suite rather than lurking until Stage B tries to
+  run it inside a Durable Object.
+- **client** runs under **jsdom**. jsdom performs no layout, so anything that
+  reasons about size stubs its geometry explicitly via `tests/dom.ts`.
 
 Two rules that must hold for the whole project:
 
