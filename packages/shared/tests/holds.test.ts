@@ -23,7 +23,7 @@ import rawHolds from '../data/maps/holds.json';
 const map: MapData = loadMap(rawHolds);
 const graph: Graph = buildGraph(map);
 
-/** Florence yields 3 gold a turn â€” the joint-richest hold on the map. */
+/** Florence yields 3 gold a turn — the joint-richest hold on the map. */
 function newGame(): GameState {
   return createInitialState({
     map,
@@ -57,7 +57,7 @@ describe('income', () => {
   it('pays once per round, every round', () => {
     const before = goldOf(state, 'p0');
     endTurn(state, graph); // south
-    endTurn(state, graph); // north again â€” one full round
+    endTurn(state, graph); // north again — one full round
     expect(goldOf(state, 'p0')).toBe(before + 3);
 
     endTurn(state, graph);
@@ -88,7 +88,7 @@ describe('income', () => {
 });
 
 describe('recruiting', () => {
-  it('raises a unit, spends the gold and uses the holdâ€™s action', () => {
+  it("raises a unit, spends the gold and uses the hold's action", () => {
     const before = goldOf(state, 'p0');
     const garrison = unitsIn(state, 'florence').length;
 
@@ -109,8 +109,14 @@ describe('recruiting', () => {
 
   it('blocks recruiting without the gold', () => {
     playerById(state, 'p0')!.gold = 0;
-    expect(recruitBlockedReason(state, 'florence', 'archer', 'p0')).toMatch(/needs 4 gold, has 0/);
+    expect(recruitBlockedReason(state, 'florence', 'archer', 'p0')).toMatch(
+      new RegExp(`needs ${BALANCE.cost.archer} gold, has 0`),
+    );
     expect(() => recruit(state, 'florence', 'archer', 'p0')).toThrow(BuildError);
+  });
+
+  it('prices archers below swordsmen — fire is cheap, staying power is not', () => {
+    expect(BALANCE.cost.archer).toBeLessThan(BALANCE.cost.swordsman);
   });
 
   it('blocks recruiting at a neutral hold', () => {
@@ -147,16 +153,21 @@ describe('fortifying', () => {
     for (const type of ['ramparts', 'watchtower', 'scorpion'] as const) {
       const fresh = newGame();
       playerById(fresh, 'p0')!.gold = 50;
+      // Holds start with ramparts already, so measure the increment.
+      const before = getRegion(fresh, 'florence').defenses[type];
       fortify(fresh, 'florence', type, 'p0');
-      expect(getRegion(fresh, 'florence').defenses[type]).toBe(1);
+      expect(getRegion(fresh, 'florence').defenses[type]).toBe(before + 1);
     }
   });
 
-  it('respects each defenseâ€™s stack cap', () => {
+  it("respects each defense's stack cap", () => {
     playerById(state, 'p0')!.gold = 500;
 
-    // Ramparts cap at 2, one per turn.
-    for (let i = 0; i < BALANCE.ramparts.cap; i++) {
+    // One per turn, counting the wall the hold already came with.
+    const remaining = BALANCE.ramparts.cap - getRegion(state, 'florence').defenses.ramparts;
+    expect(remaining).toBeGreaterThan(0);
+
+    for (let i = 0; i < remaining; i++) {
       fortify(state, 'florence', 'ramparts', 'p0');
       endTurn(state, graph);
       endTurn(state, graph);
@@ -178,7 +189,7 @@ describe('fortifying', () => {
 });
 
 describe('recruit versus fortify', () => {
-  it('are mutually exclusive â€” one hold, one action per turn', () => {
+  it('are mutually exclusive — one hold, one action per turn', () => {
     playerById(state, 'p0')!.gold = 100;
 
     recruit(state, 'florence', 'swordsman', 'p0');

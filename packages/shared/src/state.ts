@@ -7,7 +7,7 @@
  */
 
 import { BALANCE } from './balance';
-import { emptyDefenses } from './defense';
+import { addDefense, emptyDefenses } from './defense';
 import { buildGraph } from './graph';
 import { createRng } from './rng';
 import { beginTeamTurn } from './turn';
@@ -221,6 +221,16 @@ export function createInitialState(options: CreateStateOptions): GameState {
     for (let i = 0; i < BALANCE.neutral.archers; i++) {
       spawnUnit(state, 'archer', NEUTRAL, region.id);
     }
+  }
+
+  // Every hold starts walled, held or not. Ramparts are the one defence that is
+  // there from turn one rather than bought, so an assault is never a free walk
+  // even against an unclaimed hold.
+  for (const region of map.regions) {
+    const held = regions[region.id];
+    if (!held) continue;
+    const walls = held.owner === NEUTRAL ? BALANCE.neutral.ramparts : BALANCE.start.ramparts;
+    for (let i = 0; i < walls; i++) addDefense(held, 'ramparts');
   }
 
   // Open the first team's turn properly rather than treating turn 1 as a

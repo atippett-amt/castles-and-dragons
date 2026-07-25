@@ -6,6 +6,7 @@ import {
   createInitialState,
   getRegion,
   loadMap,
+  razeDefenses,
   resolveSiege,
   spawnUnit,
   unitsIn,
@@ -67,6 +68,9 @@ function siege(options: {
 
   const region = getRegion(state, at);
   region.owner = 'def';
+  // Levelled first: holds now come with starting walls, and a combat scenario
+  // needs to state its defences exactly rather than build on top of them.
+  razeDefenses(region);
   for (const [type, count] of Object.entries(options.defenses ?? {})) {
     for (let i = 0; i < (count ?? 0); i++) addDefense(region, type as DefenseType);
   }

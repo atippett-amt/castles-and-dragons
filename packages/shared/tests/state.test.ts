@@ -88,11 +88,13 @@ describe('createInitialState', () => {
     }
   });
 
-  it('gives every hold a full build allowance and no defenses', () => {
+  it('gives every hold a full build allowance and its starting walls', () => {
     const state = createInitialState(setupFor(2));
     for (const region of Object.values(state.regions)) {
       expect(region.buildsUsed).toBe(0);
-      expect(region.defenses).toEqual({ ramparts: 0, watchtower: 0, scorpion: 0 });
+      // Every hold begins walled — held or not — so no assault is a free walk.
+      const walls = region.owner === NEUTRAL ? BALANCE.neutral.ramparts : BALANCE.start.ramparts;
+      expect(region.defenses).toEqual({ ramparts: walls, watchtower: 0, scorpion: 0 });
     }
   });
 
